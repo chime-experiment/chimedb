@@ -8,10 +8,7 @@ import re
 def _get_version():
     with codecs.open(
         os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            "chimedb",
-            "core",
-            "__init__.py",
+            os.path.abspath(os.path.dirname(__file__)), "chimedb", "core", "__init__.py"
         ),
         "r",
     ) as init_py:
