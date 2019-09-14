@@ -272,3 +272,49 @@ def connect_database(read_write=False, reconnect=False):
 
     pw_database = connector.get_peewee_database()
     database_proxy.initialize(pw_database)
+
+
+def create_tables(packages=None):
+    """Create tables in chimedb.
+
+    Parameters
+    ----------
+    packages : list, optional
+        List of chimedb subpackages to create tables from.
+    """
+
+    import importlib
+    import chimedb
+
+    # Ensure we have a list
+    if isinstance(packages, str):
+        packages = [packages]
+
+    # If packages was not set, try and get all subpackages of chimedb
+    if packages is None:
+        import pkgutil
+
+        # Get a list of all subpackages
+        packages = [
+            info.name + ".orm"
+            for info in pkgutil.iter_modules(chimedb.__path__, chimedb.__name__ + ".")
+        ]
+
+    # Import all the specified packages to get them to get their subclasses regiseted
+    for pkgname in packages:
+        try:
+            importlib.import_module(pkgname)
+        except ModuleNotFoundError:
+            pass
+
+    # Construct the list of tables
+    tables = []
+    for cls in base_model.__subclasses__():
+
+        # Skip the name_table as it's not really a table
+        if cls is name_table:
+            continue
+        tables.append(cls)
+
+    logger.info("Creating tables: %s", ", ".join([table.__name__ for table in tables]))
+    database_proxy.create_tables(tables)
