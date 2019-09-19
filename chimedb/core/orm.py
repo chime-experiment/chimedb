@@ -274,30 +274,49 @@ def connect_database(read_write=False, reconnect=False):
     database_proxy.initialize(pw_database)
 
 
-def create_tables(packages=None):
+def create_tables(packages=None, ignore=list(), check=False):
     """Create tables in chimedb.
 
     Parameters
     ----------
     packages : list, optional
         List of chimedb subpackages to create tables from.
+    ignore : list, optional
+        List of tables to skip creating
+    check : bool, optional
+        If True, instead of creating tables, just
+        list tables which would be created
     """
 
     import importlib
-    import chimedb
+
+    # Ensure we have a read-write connection
+    if not check:
+        connect_database(read_write=True)
 
     # Ensure we have a list
     if isinstance(packages, str):
         packages = [packages]
 
+    # The ignore table could be string class names or else actual classes
+    ignore = [item if isinstance(item, str) else item.__name__ for item in ignore]
+
+    # Add abstract table classes that should always be ignored.
+    ignore.append("name_table")
+
     # If packages was not set, try and get all subpackages of chimedb
     if packages is None:
         import pkgutil
+        import chimedb
+
+        # These subpackages we never import
+        blacklist = ["chimedb.setup", "chimedb.core", "chimedb.config"]
 
         # Get a list of all subpackages
         packages = [
             info.name + ".orm"
             for info in pkgutil.iter_modules(chimedb.__path__, chimedb.__name__ + ".")
+            if info.name not in blacklist
         ]
 
     # Import all the specified packages to get them to get their subclasses regiseted
@@ -311,10 +330,24 @@ def create_tables(packages=None):
     tables = []
     for cls in base_model.__subclasses__():
 
-        # Skip the name_table as it's not really a table
-        if cls is name_table:
+        if cls.__name__ in ignore:
             continue
         tables.append(cls)
 
-    logger.info("Creating tables: %s", ", ".join([table.__name__ for table in tables]))
-    database_proxy.create_tables(tables)
+    if check:
+        tables_by_module = dict()
+
+        for table in tables:
+            modlist = tables_by_module.setdefault(table.__module__, list())
+            modlist.append(table.__name__)
+
+        logger.info("Would create:")
+        for mod in sorted(tables_by_module.keys()):
+            logger.info("    from {0}:".format(mod))
+            for table in sorted(tables_by_module[mod]):
+                logger.info("        " + table)
+    else:
+        logger.info(
+            "Creating tables: %s", ", ".join([table.__name__ for table in tables])
+        )
+        database_proxy.create_tables(tables)
