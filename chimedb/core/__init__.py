@@ -69,8 +69,6 @@ Modules
     Helper functions and base table classes used by other packages when defining
     the object-relational models for tables in the database.
 
-* `util`
-    Utility functions for database maintenance.
 
 Notes
 =====
@@ -82,6 +80,8 @@ which define tables include:
 
 * `chimedb_di`
         for data index tables updated by alpenhorn
+* `chimedb_dataflags`
+        for data flags tables
 * `ch_util`
         for many other tables
 

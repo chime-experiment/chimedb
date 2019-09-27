@@ -6,8 +6,10 @@ This package provides low-level routines for accessing the CHIME SQL database.
 database, you will also need one or more packages which define object-relational
 models for the tables in the database.  Packages which define tables include:
 
-* [chimedb.data_index](https://github.com/chime-experiment/chimedb_di): for data index tables updated by
-    alpenhorn
+* [chimedb.data_index](https://github.com/chime-experiment/chimedb_di): for data
+    index tables updated by alpenhorn
+* [chimedb.dataflags](https://github.com/chime-experiment/chimedb_dataflags):
+    for data flags, and the associated `cdf` CLI
 * [ch_util](https://bitbucket.org/chime/ch_util): for all other tables
 
 ## Connecting to the Database
@@ -124,7 +126,3 @@ Exceptions related to database operations (queries and updates):
 
   Helper functions and base table classes used by other packages when defining
   the object-relational models for tables in the database.
-
-* `util`
-
-  Utility functions for database maintenance.
