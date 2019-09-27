@@ -254,16 +254,11 @@ def connect_database(read_write=False, reconnect=False):
 
     from . import connectdb
 
-    connectdb.connect()
+    connectdb.connect(reconnect)
 
     # Don't attempt to connect if the DB connection doesn't exist (due
     # to MPI reasons).
     if not connectdb.connect_this_rank():
-        return
-
-    # Check if we have already connected the database proxy and only continue if
-    # we are set to reconnect
-    if not reconnect and database_proxy.obj is not None:
         return
 
     # Retrieve the database connection

@@ -22,7 +22,7 @@ source doesn't result in a successful connection to the database.
 The configuration sources searched for are:
 
     * an environmental variable CHIMEDB_SQLITE, containing the path to a
-        sqlite database
+        sqlite database or a sqlite URI
     * a YAML file specified by the environmental variable CHIMEDBRC
     * a YAML file called ``.chimedbrc`` in the current directory
     * a YAML file called ``.chimedbrc`` in the user's home directory
@@ -36,37 +36,31 @@ Any of the YAML files listed above, if present, should look like:
 
 .. code-block:: yaml
 
-    connector:
-        db:              mydb
-        user:            myuser
-        passwd:          mypasswd
-        host:            myhost
-        port:            NNNN
-        tunnel_host:     mytunnelhost
-        tunnel_user:     mytunneluser
-        tunnel_identity: mytunnelidentity
-
-    connector_rw:
-        db:              mydb
-        user:            myuser
-        passwd:          mypasswd
-        host:            myhost
-        port:            NNNN
-        tunnel_host:     mytunnelhost
-        tunnel_user:     mytunneluser
-        tunnel_identity: mytunnelidentity
+    chimedb:
+        db_type:         mysql
+        db:              <database name>
+        user_ro:         <read-only username>
+        passwd_ro:       <read-only password>
+        user_rw:         <read-write username>
+        passwd_rw:       <read-write password>
+        host:            <database hostname>
+        port:            <database port number, default 3306>
+        tunnel_host:     <connection tunnel hostname>
+        tunnel_user:     <connection tunnel username>
+        tunnel_identity: <connection tunnel identify file>
 
 Or for a sqlite database:
 
 .. code-block:: yaml
 
-    connector:
+    chimedb:
         db_type:         sqlite
-        db:              mydb_file.db
+        db:              <filename or URI>
 
 (Of course, you should put proper arguments in your file! No quotation marks
 should be used for strings.) If no tunnel is required, simply omit the
-``tunnel_`` entries. You must define both ``connector`` and ``connector_rw``.
+``tunnel_`` entries.  The password entries can also be omitted if a password
+is not needed.
 
 If none of the YAML files are found, the last thing tried is to import a
 Python module called ``chimedb.config``.  This module, if present, should
@@ -94,6 +88,7 @@ These constants tell the module how to connect to the CHIME database.
 
 :const:`ALL_RANKS`
     Whether to try to connect all ranks in an MPI job, or just rank=0.
+    Default: False
 """
 
 # === Start Python 2/3 compatibility
@@ -277,14 +272,19 @@ class BaseConnector(object):
 
     @staticmethod
     def from_dict(d, context=None):
-        """Returns a new subclass of :class:`BaseConnector` based on data in
-        a dictionary.
+        """Returns a three-element tuple containing:
+            * a single-item list containing a subclass of :class:`BaseConnector` for a read-only connection
+            * a single-item list containing a subclass of :class:`BaseConnector` for a read-write connection
+            * the passed-in context
+        based on data in a dictionary.
 
         Typically invoked to initialise a connector from a parsed YAML file.
         """
 
         defaults = {
-            "passwd": "",
+            "passwd_ro": "",
+            "passwd_rw": "",
+            "port": "3306",
             "tunnel_host": None,
             "tunnel_user": None,
             "tunnel_identity": None,
@@ -294,7 +294,11 @@ class BaseConnector(object):
         if "db_type" not in d:
             d["db_type"] = "MySQL"
         if d["db_type"] == "sqlite":
-            return SqliteConnector(d["db"])
+            return (
+                [SqliteConnector(d["db"], ro=True)],
+                [SqliteConnector(d["db"])],
+                context,
+            )
         elif d["db_type"] == "MySQL":
             for var, default in defaults.items():
                 if var not in d:
@@ -303,15 +307,32 @@ class BaseConnector(object):
             if d["tunnel_identity"]:
                 d["tunnel_identity"] == os.path.expanduser(d["tunnel_identity"])
 
-            return MySQLConnector(
-                d["db"],
-                d["user"],
-                d["passwd"],
-                d["host"],
-                int(d["port"]),
-                d["tunnel_host"],
-                d["tunnel_user"],
-                d["tunnel_identity"],
+            return (
+                [
+                    MySQLConnector(
+                        d["db"],
+                        d["user_ro"],
+                        d["passwd_ro"],
+                        d["host"],
+                        int(d["port"]),
+                        d["tunnel_host"],
+                        d["tunnel_user"],
+                        d["tunnel_identity"],
+                    )
+                ],
+                [
+                    MySQLConnector(
+                        d["db"],
+                        d["user_rw"],
+                        d["passwd_rw"],
+                        d["host"],
+                        int(d["port"]),
+                        d["tunnel_host"],
+                        d["tunnel_user"],
+                        d["tunnel_identity"],
+                    )
+                ],
+                context,
             )
         else:
             ctx = " in {0}".format(context) if context else ""
@@ -486,38 +507,47 @@ class SqliteConnector(BaseConnector):
     Parameters
     ----------
     db : str
-        Filename for the Sqlite database.
-
+        Filename or URI for the Sqlite database.
+    ro : bool
+        If True, make a read-only connector.  Ignored if db is a URI.
     """
 
-    def __init__(self, db):
-        self._db = db
+    def __init__(self, db, ro=False):
+        # If we've already been handed a URI, we just roll with it
+        if ro and not db.startswith("file:"):
+            self._db = "file:" + db + "?mode=ro"
+        else:
+            self._db = db
 
-    def ensure_route_to_database(self):
-        if not os.path.isfile(self._db):
-            raise NoRouteToDatabase("No Sqlite database at file %s." % self._db)
+        self._database = None
 
     def get_connection(self):
-        self.ensure_route_to_database()
         try:
-            connection = sqlite3.connect(self._db)
+            connection = sqlite3.connect(
+                self._db, uri=True if self._db.startswith("file:") else False
+            )
         except sqlite3.OperationalError:
-            # TODO More descriptive here.
-            raise ConnectionError("Failed to connect to database.")
+            raise ConnectionError(
+                "Failed to connect to Sqlite database {0}.".format(self._db)
+            )
         return connection
 
     def get_peewee_database(self):
-        self.ensure_route_to_database()
-        try:
-            database = pw.SqliteDatabase(self._db)
-        except None:
-            # TODO More descriptive here.
-            raise ConnectionError("Failed to connect to database.")
-        return database
+        self._database = pw.SqliteDatabase(
+            self._db, uri=True if self._db.startswith("file:") else False
+        )
+        return self._database
+
+    def close(self):
+        """Close an open connection."""
+        if self._database is not None:
+            _logger.debug("Closing databse.")
+            self._database.close()
+            self._database = None
 
     @property
     def description(self):
-        out = "Sqlite database in file %s" % self._db
+        out = "Sqlite database at " + self._db
         return out
 
 
@@ -540,44 +570,6 @@ def tunnel_active(tunnel_port):
         return False
     sd.close()
     return True
-
-
-def create_tunnel(
-    host,
-    port,
-    tunnel,
-    tunnel_port,
-    user=None,
-    identity=None,
-    ssh_port=None,
-    bind_address=None,
-):
-    # XXX This doesn't seem to raise an error if it fails.  This is a shame.
-    command = "/usr/bin/ssh -o ServerAliveInterval=60"
-    if user is not None:
-        command += " -l %s" % user
-    if identity is not None:
-        command += " -i %s" % identity
-    if ssh_port is not None:
-        command += " -p %i" % ssh_port
-
-    if bind_address is None:
-        command += " -fN -x -L %d:%s:%d %s" % (tunnel_port, host, port, tunnel)
-    else:
-        command += " -fN -x -L %s:%d:%s:%d %s" % (
-            bind_address,
-            tunnel_port,
-            host,
-            port,
-            tunnel,
-        )
-
-    if not tunnel_active(tunnel_port):
-        msg = "SSH tunnel to DB inactive: creating one with command %s." % command
-        _logger.info(msg)
-        # print command    # Eventually get rid of this.
-        pipe = os.popen(command, "r")
-        pipe.close()
 
 
 def connected_mysql(db):
@@ -623,7 +615,7 @@ def _initialize_connections(connectors_to_try, context, rw=False):
 
 def _try_rc_files():
     conn = dict()
-    sections = ("connector", "connector_rw")
+    section = "chimedb"
 
     # Try the contents of CHIMEDBRC first, if given
     if "CHIMEDBRC" in os.environ and os.environ["CHIMEDBRC"]:
@@ -639,33 +631,13 @@ def _try_rc_files():
                     continue
 
                 # Create the connectors
-                for section in sections:
-                    if section in rc:
-                        conn[section] = BaseConnector.from_dict(rc[section], rc_file)
+                if section in rc:
+                    conn = BaseConnector.from_dict(rc[section], rc_file)
 
-                # It's all or nothing
-                if "connector" in conn:
-                    if "connector_rw" not in conn:
-                        raise ConnectionError(
-                            """
-Asymmetric connection configuration!
-File "{0}" defines 'connector' but not 'connector_rw'.""".format(
-                                rc_file
-                            )
-                        )
-                    else:
-                        return ([conn["connector"]], [conn["connector_rw"]], rc_file)
-                elif "connector_rw" in conn:
-                    raise ConnectionError(
-                        """
-Asymmetric connection configuration!
-File "{0}" defines 'connector_rw' but not 'connector'.""".format(
-                            rc_file
-                        )
-                    )
+                if conn is not None:
+                    return conn
 
-                # If we got here, neither connector was created, so we try the
-                # next file
+                # If we got here, things didn't work, so we try the next file
                 logging.debug("Skipping invalid RC file {0}".format(rc_file))
         except IOError:
             pass
@@ -703,7 +675,7 @@ def connect(reconnect=False):
 
     # First look for CHIMEDB_SQLITE
     if "CHIMEDB_SQLITE" in os.environ and os.environ["CHIMEDB_SQLITE"]:
-        connectors = [SqliteConnector(os.environ["CHIMEDB_SQLITE"])]
+        connectors = [SqliteConnector(os.environ["CHIMEDB_SQLITE"], ro=True)]
         connectors_rw = [SqliteConnector(os.environ["CHIMEDB_SQLITE"])]
         context = "CHIMEDB_SQLITE"
     else:
@@ -736,7 +708,9 @@ locations or install `chimedb.config`."""
     current_connector_RW = getattr(_threadlocal, "current_connector_RW", None)
 
     if current_connector is None or current_connector_RW is None:
-        raise ConnectionError()
+        raise ConnectionError(
+            "Connection data found, but no connection could be established."
+        )
 
 
 def close():

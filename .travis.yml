@@ -12,11 +12,10 @@ notifications:
 before_install:
     - pip install black
     - pip install future
-    - pip install pytest
 
 install:
     - pip install .
 
 script:
-    # Run black on all .py files in all subfolders
     - black --check .
+    - python3 -m unittest discover -s test -v
