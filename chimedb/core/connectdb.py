@@ -295,7 +295,7 @@ class BaseConnector(object):
             d["db_type"] = "MySQL"
         if d["db_type"] == "sqlite":
             return (
-                [SqliteConnector(d["db"], ro=True)],
+                [SqliteConnector(d["db"], read_write=False)],
                 [SqliteConnector(d["db"])],
                 context,
             )
@@ -508,13 +508,14 @@ class SqliteConnector(BaseConnector):
     ----------
     db : str
         Filename or URI for the Sqlite database.
-    ro : bool
-        If True, make a read-only connector.  Ignored if db is a URI.
+    read_write : bool, optional
+        If False, make a read-only connector.  Ignored if db is a URI.
+        Default: True
     """
 
-    def __init__(self, db, ro=False):
+    def __init__(self, db, read_write=True):
         # If we've already been handed a URI, we just roll with it
-        if ro and not db.startswith("file:"):
+        if not read_write and not db.startswith("file:"):
             self._db = "file:" + db + "?mode=ro"
         else:
             self._db = db
@@ -679,7 +680,7 @@ def connect(reconnect=False):
 
     # First look for CHIMEDB_SQLITE
     if "CHIMEDB_SQLITE" in os.environ and os.environ["CHIMEDB_SQLITE"]:
-        connectors = [SqliteConnector(os.environ["CHIMEDB_SQLITE"], ro=True)]
+        connectors = [SqliteConnector(os.environ["CHIMEDB_SQLITE"], read_write=False)]
         connectors_rw = [SqliteConnector(os.environ["CHIMEDB_SQLITE"])]
         context = "CHIMEDB_SQLITE"
     else:
