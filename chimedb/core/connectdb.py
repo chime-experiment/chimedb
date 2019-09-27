@@ -572,6 +572,10 @@ def tunnel_active(tunnel_port):
     return True
 
 
+def create_tunnel(*args, **kwargs):
+    raise NotImplementedError("Try using sshtunnel instead.")
+
+
 def connected_mysql(db):
     try:
         db.ping()
