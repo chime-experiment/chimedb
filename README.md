@@ -8,7 +8,7 @@ models for the tables in the database.  Packages which define tables include:
 
 * [chimedb.data_index](https://github.com/chime-experiment/chimedb_di): for data
     index tables updated by alpenhorn
-* [chimedb.dataflags](https://github.com/chime-experiment/chimedb_dataflags):
+* [chimedb.dataflag](https://github.com/chime-experiment/chimedb_dataflag):
     for data flags, and the associated `cdf` CLI
 * [ch_util](https://bitbucket.org/chime/ch_util): for all other tables
 

@@ -80,8 +80,8 @@ which define tables include:
 
 * `chimedb_di`
         for data index tables updated by alpenhorn
-* `chimedb_dataflags`
-        for data flags tables
+* `chimedb_dataflag`
+        for data flag tables
 * `ch_util`
         for many other tables
 
