@@ -89,6 +89,34 @@ These constants tell the module how to connect to the CHIME database.
 :const:`ALL_RANKS`
     Whether to try to connect all ranks in an MPI job, or just rank=0.
     Default: False
+
+
+Test-Safe Mode
+==============
+
+To safely use this package without accidentally running tests against
+the production database, you can call `chimedb.core.test_enable()`
+before trying to connect to the database.
+
+Test mode disables all the standard configuration sources:
+
+    * Environmental variables CHIMEDB_SQLITE and CHIMEDBRC are ignored
+    * None of the default RC file locations are checked
+    * No attempt is made to use the `chimedb.config` module
+
+Instead the following test-only configuration sources are used, in order:
+
+    * The environmental variable CHIMEDB_TEST_SQLITE
+    * The environmental variable CHIMEDB_TEST_RC
+
+These work the same as CHIMEDB_SQLITE and CHIMEDBRC, except that a value
+for CHIMEDB_TEST_RC that contains the string "chimedbrc" will be rejected,
+to further ensure deployment configuration is not used.
+
+If neither environmental variable is present, attempting to connect to the
+database will result in an empty in-memory sqlite database being created
+and connected to.  This in-memory database will exist until close() is
+called (or the program exits).
 """
 
 # === Start Python 2/3 compatibility
@@ -162,6 +190,16 @@ _RC_FILES = [
 #
 # Allow all ranks to connect to the DB
 ALL_RANKS = False
+
+
+# Test-safe mode
+_TEST_ENABLE = False
+
+
+def test_enable():
+    global _TEST_ENABLE
+    _logger.debug("Enabling test mode")
+    _TEST_ENABLE = True
 
 
 def current_connector(read_write=False):
@@ -619,12 +657,24 @@ def _initialize_connections(connectors_to_try, context, rw=False):
 
 
 def _try_rc_files():
+    global _RC_FILES
     conn = dict()
     section = "chimedb"
 
     # Try the contents of CHIMEDBRC first, if given
-    if "CHIMEDBRC" in os.environ and os.environ["CHIMEDBRC"]:
-        _RC_FILES.insert(0, os.environ["CHIMEDBRC"])
+    if _TEST_ENABLE:
+        if "CHIMEDB_TEST_RC" in os.environ and os.environ["CHIMEDB_TEST_RC"]:
+            _RC_FILES = [os.environ["CHIMEDB_TEST_RC"]]
+            if "chimedbrc" in _RC_FILES[0]:
+                # OSError is apparently the heir to EnvironmentError
+                raise OSError(
+                    'Bad value for CHIMEDB_TEST_RC: cannot contain "chimedbrc"'
+                )
+        else:
+            _RC_FILES = []
+    else:
+        if "CHIMEDBRC" in os.environ and os.environ["CHIMEDBRC"]:
+            _RC_FILES.insert(0, os.environ["CHIMEDBRC"])
 
     for rc_file in _RC_FILES:
         try:
@@ -679,15 +729,21 @@ def connect(reconnect=False):
         return
 
     # First look for CHIMEDB_SQLITE
-    if "CHIMEDB_SQLITE" in os.environ and os.environ["CHIMEDB_SQLITE"]:
-        connectors = [SqliteConnector(os.environ["CHIMEDB_SQLITE"], read_write=False)]
-        connectors_rw = [SqliteConnector(os.environ["CHIMEDB_SQLITE"])]
-        context = "CHIMEDB_SQLITE"
+    sqlite_var = "CHIMEDB_TEST_SQLITE" if _TEST_ENABLE else "CHIMEDB_SQLITE"
+    if sqlite_var in os.environ and os.environ[sqlite_var]:
+        connectors = [SqliteConnector(os.environ[sqlite_var], read_write=False)]
+        connectors_rw = [SqliteConnector(os.environ[sqlite_var])]
+        context = sqlite_var
     else:
         rc_data = _try_rc_files()
 
         if rc_data:
             connectors, connectors_rw, context = rc_data
+        elif _TEST_ENABLE:
+            # Make an in-memory sqlite database
+            connectors = [SqliteConnector("file::memory:?cache=shared&mode=ro")]
+            connectors_rw = [SqliteConnector("file::memory:?cache=shared")]
+            context = "_TEST_ENABLE"
         else:
             try:
                 from chimedb.config import connectors, connectors_rw

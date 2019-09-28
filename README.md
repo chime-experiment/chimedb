@@ -10,6 +10,8 @@ models for the tables in the database.  Packages which define tables include:
     index tables updated by alpenhorn
 * [chimedb.dataflag](https://github.com/chime-experiment/chimedb_dataflag):
     for data flags, and the associated `cdf` CLI
+* [chimedb.dataset](https://github.com/chime-experiment/chimedb_dataset):
+    for dataset tables updated by comet
 * [ch_util](https://bitbucket.org/chime/ch_util): for all other tables
 
 ## Connecting to the Database
@@ -106,6 +108,12 @@ Exceptions related to database operations (queries and updates):
 
     If `True`, re-establish a new connection to the database, even if
     one already exists.
+
+* `test_enable()`
+
+  Turn on test-safe mode.  For use during unit testing.  Turning on test-safe
+  mode prevents actually running tests on the production database.  See
+  `connectdb` for full details.
 
 ### Globals
 

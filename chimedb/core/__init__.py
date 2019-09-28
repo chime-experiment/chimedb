@@ -97,6 +97,6 @@ from .exceptions import (
 )
 from .orm import connect_database as connect
 from .orm import database_proxy as proxy
-from .connectdb import close
+from .connectdb import close, test_enable
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
