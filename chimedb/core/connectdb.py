@@ -293,13 +293,13 @@ class BaseConnector(object):
         # Default database type is MySQL.
         if "db_type" not in d:
             d["db_type"] = "MySQL"
-        if d["db_type"] == "sqlite":
+        if d["db_type"].lower() == "sqlite":
             return (
                 [SqliteConnector(d["db"], read_write=False)],
                 [SqliteConnector(d["db"])],
                 context,
             )
-        elif d["db_type"] == "MySQL":
+        elif d["db_type"].lower() == "mysql":
             for var, default in defaults.items():
                 if var not in d:
                     d[var] = default
