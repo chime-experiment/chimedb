@@ -96,7 +96,7 @@ Test-Safe Mode
 
 To safely use this package without accidentally running tests against
 the production database, you can set the environment variable
-`CHIMEDB_TEST_ENABLE` to a non-empty vale or call `chimedb.core.test_enable()`
+`CHIMEDB_TEST_ENABLE` to a non-empty value or call `chimedb.core.test_enable()`
 before calling `connect()`.
 
 Test mode disables all the standard configuration sources:
