@@ -14,7 +14,7 @@ class TestTable(base_model):
 datum_value = 84
 
 
-class TestSqlite(unittest.TestCase):
+class TestSafeMode(unittest.TestCase):
     """Test using test_enable() for testing"""
 
     def setUp(self):
