@@ -21,9 +21,9 @@ source doesn't result in a successful connection to the database.
 
 The configuration sources searched for are:
 
-    * an environmental variable CHIMEDB_SQLITE, containing the path to a
+    * an environment variable CHIMEDB_SQLITE, containing the path to a
         sqlite database or a sqlite URI
-    * a YAML file specified by the environmental variable CHIMEDBRC
+    * a YAML file specified by the environment variable CHIMEDBRC
     * a YAML file called ``.chimedbrc`` in the current directory
     * a YAML file called ``.chimedbrc`` in the user's home directory
     * a YAML file located at ``/etc/chime/chimedbrc``
@@ -95,8 +95,9 @@ Test-Safe Mode
 ==============
 
 To safely use this package without accidentally running tests against
-the production database, you can call `chimedb.core.test_enable()`
-before trying to connect to the database.
+the production database, you can set the environment variable
+`CHIMEDB_TEST_ENABLE` to a non-empty vale or call `chimedb.core.test_enable()`
+before calling `connect()`.
 
 Test mode disables all the standard configuration sources:
 
@@ -106,14 +107,14 @@ Test mode disables all the standard configuration sources:
 
 Instead the following test-only configuration sources are used, in order:
 
-    * The environmental variable CHIMEDB_TEST_SQLITE
-    * The environmental variable CHIMEDB_TEST_RC
+    * The environment variable CHIMEDB_TEST_SQLITE
+    * The environment variable CHIMEDB_TEST_RC
 
 These work the same as CHIMEDB_SQLITE and CHIMEDBRC, except that a value
 for CHIMEDB_TEST_RC that contains the string "chimedbrc" will be rejected,
 to further ensure deployment configuration is not used.
 
-If neither environmental variable is present, attempting to connect to the
+If neither environment variable is present, attempting to connect to the
 database will result in an empty in-memory sqlite database being created
 and connected to.  This in-memory database will exist until close() is
 called (or the program exits).
@@ -197,9 +198,11 @@ _TEST_ENABLE = False
 
 
 def test_enable():
+    """Enable test-safe mode."""
     global _TEST_ENABLE
-    _logger.debug("Enabling test mode")
-    _TEST_ENABLE = True
+    if not _TEST_ENABLE:
+        _logger.debug("Enabling test-safe mode")
+        _TEST_ENABLE = True
 
 
 def current_connector(read_write=False):
@@ -656,6 +659,14 @@ def _initialize_connections(connectors_to_try, context, rw=False):
         _logger.warning("Could not establish connection to CHIME database.")
 
 
+def _have_envvar(name):
+    """Returns True if the environment variable `name` is defined and not the
+    empty value, otherwise False"""
+    if name in os.environ and os.environ[name]:
+        return True
+    return False
+
+
 def _try_rc_files():
     global _RC_FILES
     conn = dict()
@@ -663,7 +674,7 @@ def _try_rc_files():
 
     # Try the contents of CHIMEDBRC first, if given
     if _TEST_ENABLE:
-        if "CHIMEDB_TEST_RC" in os.environ and os.environ["CHIMEDB_TEST_RC"]:
+        if _have_envvar("CHIMEDB_TEST_RC"):
             _RC_FILES = [os.environ["CHIMEDB_TEST_RC"]]
             if "chimedbrc" in _RC_FILES[0]:
                 # OSError is apparently the heir to EnvironmentError
@@ -673,7 +684,7 @@ def _try_rc_files():
         else:
             _RC_FILES = []
     else:
-        if "CHIMEDBRC" in os.environ and os.environ["CHIMEDBRC"]:
+        if _have_envvar("CHIMEDBRC"):
             _RC_FILES.insert(0, os.environ["CHIMEDBRC"])
 
     for rc_file in _RC_FILES:
@@ -728,9 +739,13 @@ def connect(reconnect=False):
         _logger.debug("Connection already exists.")
         return
 
+    # Check for CHIMEDB_TEST_ENABLE environtmental variable
+    if _have_envvar("CHIMEDB_TEST_ENABLE"):
+        test_enable()
+
     # First look for CHIMEDB_SQLITE
     sqlite_var = "CHIMEDB_TEST_SQLITE" if _TEST_ENABLE else "CHIMEDB_SQLITE"
-    if sqlite_var in os.environ and os.environ[sqlite_var]:
+    if _have_envvar(sqlite_var):
         connectors = [SqliteConnector(os.environ[sqlite_var], read_write=False)]
         connectors_rw = [SqliteConnector(os.environ[sqlite_var])]
         context = sqlite_var

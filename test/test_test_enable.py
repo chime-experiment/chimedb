@@ -18,6 +18,8 @@ class TestSqlite(unittest.TestCase):
     """Test using test_enable() for testing"""
 
     def setUp(self):
+        if "CHIMEDB_TEST_ENABLE" in os.environ:
+            del os.environ["CHIMEDB_TEST_ENABLE"]
         if "CHIMEDB_SQLITE" in os.environ:
             del os.environ["CHIMEDB_SQLITE"]
         if "CHIMEDBRC" in os.environ:
@@ -26,6 +28,48 @@ class TestSqlite(unittest.TestCase):
             del os.environ["CHIMEDB_TEST_SQLITE"]
         if "CHIMEDB_TEST_RC" in os.environ:
             del os.environ["CHIMEDB_TEST_RC"]
+
+    def test_chimedb_test_sqlite(self):
+        # Create an empty on-disk sqlite database
+        (fd, dbfile) = tempfile.mkstemp(text=True)
+        os.close(fd)
+
+        os.environ["CHIMEDB_TEST_SQLITE"] = dbfile
+
+        db.test_enable()
+
+        db.connect(read_write=True)
+        db.proxy.create_tables([TestTable])
+        TestTable.create(datum=datum_value)
+
+        # Did that work?
+        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        db.close()
+
+        # The on-disk sqlite database should not be empty anymore
+        stat = os.stat(dbfile)
+        self.assertNotEqual(stat.st_size, 0)
+
+    def test_chimedb_test_enable_envvar(self):
+        # Like test_chimedb_test_sqlite, but using the envvar to turn on
+        # test mode.
+        (fd, dbfile) = tempfile.mkstemp(text=True)
+        os.close(fd)
+
+        os.environ["CHIMEDB_TEST_SQLITE"] = dbfile
+        os.environ["CHIMEDB_TEST_ENABLE"] = "1"
+
+        db.connect(read_write=True)
+        db.proxy.create_tables([TestTable])
+        TestTable.create(datum=datum_value)
+
+        # Did that work?
+        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        db.close()
+
+        # The on-disk sqlite database should not be empty anymore
+        stat = os.stat(dbfile)
+        self.assertNotEqual(stat.st_size, 0)
 
     def test_chimedb_test_sqlite(self):
         # Create an empty on-disk sqlite database
