@@ -3,6 +3,7 @@ import sqlite3
 import tempfile
 import unittest
 import peewee as pw
+from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
@@ -19,6 +20,7 @@ class TestSqlite(unittest.TestCase):
     def tearDown(self):
         import chimedb.core as db
 
+        self.patched_env.stop()
         db.close()
         os.remove(self.dbfile)
 
@@ -36,7 +38,8 @@ class TestSqlite(unittest.TestCase):
         conn.commit()
         conn.close()
 
-        os.environ["CHIMEDB_SQLITE"] = self.dbfile
+        self.patched_env = patch.dict(os.environ, {"CHIMEDB_SQLITE": self.dbfile})
+        self.patched_env.start()
 
     def test_connect(self):
         import chimedb.core as db

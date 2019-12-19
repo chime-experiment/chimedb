@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import peewee as pw
 import chimedb.core as db
+from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
@@ -17,7 +18,13 @@ datum_value = 84
 class TestSafeMode(unittest.TestCase):
     """Test using test_enable() for testing"""
 
+    def tearDown(self):
+        self.patched_env.stop()
+
     def setUp(self):
+        self.patched_env = patch.dict(os.environ)
+        self.patched_env.start()
+
         if "CHIMEDB_TEST_ENABLE" in os.environ:
             del os.environ["CHIMEDB_TEST_ENABLE"]
         if "CHIMEDB_SQLITE" in os.environ:
