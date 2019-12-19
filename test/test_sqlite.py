@@ -41,6 +41,15 @@ class TestSqlite(unittest.TestCase):
         self.patched_env = patch.dict(os.environ, {"CHIMEDB_SQLITE": self.dbfile})
         self.patched_env.start()
 
+        if "CHIMEDB_TEST_ENABLE" in os.environ:
+            del os.environ["CHIMEDB_TEST_ENABLE"]
+        if "CHIMEDBRC" in os.environ:
+            del os.environ["CHIMEDBRC"]
+        if "CHIMEDB_TEST_SQLITE" in os.environ:
+            del os.environ["CHIMEDB_TEST_SQLITE"]
+        if "CHIMEDB_TEST_RC" in os.environ:
+            del os.environ["CHIMEDB_TEST_RC"]
+
     def test_connect(self):
         import chimedb.core as db
 
