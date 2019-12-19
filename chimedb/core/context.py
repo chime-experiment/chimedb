@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from future.builtins import *  # noqa  pylint: disable=W0401, W0614
 from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
+
 # === End Python 2/3 compatibility
 
 import logging
@@ -12,6 +13,7 @@ from . import connect, proxy
 
 # Set module logger.
 _logger = logging.getLogger("chimedb")
+
 
 def atomic(_func=None, **_kwargs):
     """peewee atomic function decorator
@@ -59,8 +61,8 @@ def atomic(_func=None, **_kwargs):
     """
 
     # Work-around for "def atomic(_func=None, *, read_write=False):" not working in Py2
-    if 'read_write' in _kwargs:
-        read_write = _kwargs['read_write']
+    if "read_write" in _kwargs:
+        read_write = _kwargs["read_write"]
     else:
         read_write = False
 
