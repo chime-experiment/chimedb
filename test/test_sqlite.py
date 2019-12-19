@@ -1,4 +1,5 @@
 import os
+import logging
 import sqlite3
 import tempfile
 import unittest
@@ -25,6 +26,7 @@ class TestSqlite(unittest.TestCase):
         os.remove(self.dbfile)
 
     def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
         # Create a temporary file
         (fd, self.dbfile) = tempfile.mkstemp()
         os.close(fd)
