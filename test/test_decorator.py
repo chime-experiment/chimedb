@@ -1,10 +1,10 @@
 import os
 import sqlite3
-import logging
 import tempfile
 import unittest
 import peewee as pw
 import chimedb.core as db
+from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
@@ -19,10 +19,10 @@ class TestDecorator(unittest.TestCase):
     """Test chimedb.core.session"""
 
     def tearDown(self):
-        import chimedb.core as db
-
         db.close()
         os.remove(self.dbfile)
+
+        self.patched_env.stop()
 
     def setUp(self):
         # Create a temporary file
@@ -38,8 +38,10 @@ class TestDecorator(unittest.TestCase):
         conn.commit()
         conn.close()
 
-        os.environ["CHIMEDB_TEST_SQLITE"] = self.dbfile
-        os.environ["CHIMEDB_TEST_ENABLE"] = "1"
+        self.patched_env = patch.dict(
+            os.environ, {"CHIMEDB_TEST_SQLITE": self.dbfile, "CHIMEDB_TEST_ENABLE": "1"}
+        )
+        self.patched_env.start()
 
     def test_atomic_rollback(self):
         @db.atomic(read_write=True)
