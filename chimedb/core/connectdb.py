@@ -153,7 +153,6 @@ import os
 import logging
 import MySQLdb
 import peewee as pw
-from playhouse import shortcuts
 import socket
 import sqlite3
 import yaml

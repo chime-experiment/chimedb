@@ -65,7 +65,7 @@ class TestSqlite(unittest.TestCase):
         TestTable.update(datum=datum_value * 2).execute()
         self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value * 2)
 
-    def test_switch_connetion(self):
+    def test_switch_connection(self):
         import chimedb.core as db
 
         self.test_connect_ro()
@@ -92,7 +92,7 @@ chimedb:
 
         # We run this test to make sure BaseConnector.from_dict has made both
         # connectors correctly.
-        self.test_switch_connetion()
+        self.test_switch_connection()
         os.unlink(rcfile)
 
 

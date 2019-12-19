@@ -37,6 +37,17 @@ Exceptions related to database operations (queries and updates):
 * `ValidationError(CHIMEdbError)`
     A cell value failed validation.
 
+Decorators
+==========
+
+You can use the following function decorator for transaction management:
+
+* @atomic
+    Execute the decorated function within a peewee atomic() context.
+
+It will ensure a connection is made to the database and execute the
+decorated function in an atomic context.  The database is not closed.
+
 
 Functions
 =========
@@ -98,5 +109,6 @@ from .exceptions import (
 from .orm import connect_database as connect
 from .orm import database_proxy as proxy
 from .connectdb import close, test_enable
+from .context import atomic
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
