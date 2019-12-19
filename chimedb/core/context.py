@@ -1,4 +1,9 @@
 """CHIMEdb context management."""
+# === Start Python 2/3 compatibility
+from __future__ import absolute_import, division, print_function, unicode_literals
+from future.builtins import *  # noqa  pylint: disable=W0401, W0614
+from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
+# === End Python 2/3 compatibility
 
 import logging
 import functools
@@ -8,8 +13,7 @@ from . import connect, proxy
 # Set module logger.
 _logger = logging.getLogger("chimedb")
 
-
-def atomic(_func=None, *, read_write=False):
+def atomic(_func=None, **_kwargs):
     """peewee atomic function decorator
 
     Use this to decorate a function:
@@ -53,6 +57,12 @@ def atomic(_func=None, *, read_write=False):
         If True, use a read-write connection to the database, otherwise
         a read-only connection will be established.
     """
+
+    # Work-around for "def atomic(_func=None, *, read_write=False):" not working in Py2
+    if 'read_write' in _kwargs:
+        read_write = _kwargs['read_write']
+    else:
+        read_write = False
 
     def atomic_decorator(_func):
         # If this is a click group or command, shoe-horn ourselves into it by
