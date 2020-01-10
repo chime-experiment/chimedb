@@ -33,27 +33,73 @@ database_proxy = pw.Proxy()
 
 
 class EnumField(pw.Field):
-    """Implements an enum field for the ORM.
+    """Implements an ENUM field for peewee.
 
-    Why doesn't peewee support enums? That's dumb. We should make one."""
+    Only MySQL and PostgreSQL support `ENUM` types natively in the database. For
+    Sqlite (and others), the `ENUM` is implemented as an appropriately sized
+    `VARCHAR` and the validation is done at the Python level.
 
-    field_type = "enum"
+    .. warning::
+        For the *native* ``ENUM`` to work you *must* register it with peewee by
+        doing something like::
+
+            db.register_fields({'enum': 'enum'})
+
+        This will happen automatically if you use chimedb.core.connect() to
+        create the database connection.
+
+    Parameters
+    ----------
+    enum_list : list
+        A list of the string values for the ENUM.
+
+    Attributes
+    ----------
+    native : bool
+        Attempt to use the native database `ENUM` type. Should be set at the
+        *class* level. Only supported for MySQL or PostgreSQL, and will throw
+        SQL syntax errors if used for other databases.
+    """
+
+    native = True
+
+    @property
+    def field_type(self):
+        if self.native:
+            return "enum"
+        else:
+            return "string"
 
     def __init__(self, enum_list, *args, **kwargs):
         self.enum_list = enum_list
+
         self.value = []
         for e in enum_list:
-            self.value.append("'" + str(e) + "'")
+            self.value.append("'%s'" % e)
+
+        self.maxlen = max([len(val) for val in self.enum_list])
+
         super(EnumField, self).__init__(*args, **kwargs)
 
     def clone_base(self, **kwargs):
+        # Add the extra parameter so the field is cloned properly
         return super(EnumField, self).clone_base(enum_list=self.enum_list, **kwargs)
 
     def get_modifiers(self):
-        return self.value or None
+        # This routine seems to be for setting the arguments for creating the
+        # column.
+        if self.native:
+            return self.value or None
+        else:
+            return [self.maxlen]
 
     def coerce(self, val):
-        return str(val or "")
+        # Coerce the db/python value to the correct output. Also perform
+        # validation for non native ENUMs.
+        if self.native or val in self.enum_list:
+            return str(val or "")
+        else:
+            raise TypeError("Value %s not in ENUM(%s)" % str(self.value))
 
 
 class JSONDictField(pw.TextField):
@@ -236,6 +282,8 @@ def connect_database(read_write=False, reconnect=False):
 
     A call to this function must be made before using the `chimedb` proxy
     object (`chimedb.core.proxy`, AKA `chimedb.core.orm.database_proxy`).
+    This includes _any_ use of a base_model-derived table class to access
+    data.
 
     Parameters
     ----------
@@ -268,6 +316,17 @@ def connect_database(read_write=False, reconnect=False):
         raise ConnectionError("No database connection could be established.")
 
     pw_database = connector.get_peewee_database()
+
+    # Set up and register EnumField
+    global EnumField
+
+    if isinstance(pw_database, (pw.MySQLDatabase, pw.PostgresqlDatabase)):
+        pw_database.field_types["enum"] = "enum"
+        EnumField.native = True
+    else:
+        EnumField.native = False
+
+    # Initialise the proxy
     database_proxy.initialize(pw_database)
 
 
