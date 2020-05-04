@@ -111,4 +111,8 @@ from .orm import database_proxy as proxy
 from .connectdb import close, test_enable
 from .context import atomic
 
-__version__ = "0.4.0"
+
+from ._version import get_versions
+
+__version__ = get_versions()["version"]
+del get_versions
