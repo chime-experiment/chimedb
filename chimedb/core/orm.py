@@ -383,12 +383,18 @@ def create_tables(packages=None, ignore=list(), check=False):
             pass
 
     # Construct the list of tables
-    tables = []
-    for cls in base_model.__subclasses__():
+    def find_tables(model, tables, ignore):
+        for cls in model.__subclasses__():
 
-        if cls.__name__ in ignore:
-            continue
-        tables.append(cls)
+            if cls.__name__ in ignore:
+                continue
+            tables.append(cls)
+
+            # Look for subclasses recursively
+            find_tables(cls, tables, ignore)
+
+    tables = []
+    find_tables(base_model, tables, ignore)
 
     if check:
         tables_by_module = dict()
