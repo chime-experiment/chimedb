@@ -93,6 +93,8 @@ which define tables include:
         for data index tables updated by alpenhorn
 * `chimedb_dataflag`
         for data flag tables
+* `chimedb_dataset`
+        for dataset and state tables
 * `ch_util`
         for many other tables
 
