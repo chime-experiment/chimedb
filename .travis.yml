@@ -2,12 +2,13 @@ language: python
 os: linux
 sudo: required
 dist: xenial
-
-python:
-    - 3.6
 notifications:
     email: false
 
+python:
+    - 3.6
+services:
+    - mysql
 
 before_install:
     - pip install black
@@ -15,6 +16,9 @@ before_install:
 
 install:
     - pip install .[tests]
+
+before_script:
+    - mysql -e "CREATE DATABASE test;"
 
 script:
     - black --check .

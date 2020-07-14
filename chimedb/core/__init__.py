@@ -80,6 +80,10 @@ Modules
     Helper functions and base table classes used by other packages when defining
     the object-relational models for tables in the database.
 
+* `mediawiki`
+    A simplified model of MediaWiki's user table. This might get moved to a separate package in the
+    future.
+
 
 Notes
 =====
@@ -112,7 +116,7 @@ from .orm import connect_database as connect
 from .orm import database_proxy as proxy
 from .connectdb import close, test_enable
 from .context import atomic
-
+from . import mediawiki
 
 from ._version import get_versions
 
