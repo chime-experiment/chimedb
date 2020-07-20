@@ -14,8 +14,8 @@ before_install:
     - pip install future
 
 install:
-    - pip install .
+    - pip install .[tests]
 
 script:
     - black --check .
-    - python3 -m unittest discover -s test -v
+    - pytest -x
