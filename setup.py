@@ -21,5 +21,7 @@ setup(
     description="Low-level CHIME database access",
     license="GPL v3.0",
     url="https://github.com/chime-experiment/chimedb",
-    extras_require={"tests": ["pytest"],},
+    extras_require={
+        "tests": ["pytest"],
+    },
 )

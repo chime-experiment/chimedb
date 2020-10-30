@@ -263,8 +263,7 @@ class RetryOperationalError(object):
 
 
 class MySQLDatabaseReconnect(RetryOperationalError, pw.MySQLDatabase):
-    """A MySQL database class which will automatically retry connections.
-    """
+    """A MySQL database class which will automatically retry connections."""
 
     pass
 
