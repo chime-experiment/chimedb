@@ -635,10 +635,10 @@ def _initialize_connections(connectors_to_try, context, rw=False):
     for connector in connectors_to_try:
         try:
             connector.get_connection()
-        except (NoRouteToDatabase, ConnectionError):
+        except (NoRouteToDatabase, ConnectionError) as err:
             _logger.debug(
-                "Unable to connect to {0} defined by {1}.".format(
-                    connector.description, context
+                "Unable to connect to {0} defined by {1}: {2}".format(
+                    connector.description, context, err
                 )
             )
             continue
