@@ -31,7 +31,7 @@ properly:
 Assuming you've set up your SSH keys properly, you can also install this package directly
 from GitHub without having to check it out first:
 ```
-    pip install git+ssh://git@github.com/chime-experiment/chimedb.git
+    pip install git+https://github.com/chime-experiment/chimedb.git
 ```
 
 ## Connecting to the Database
