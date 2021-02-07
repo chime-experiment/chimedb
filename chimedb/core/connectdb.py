@@ -448,15 +448,16 @@ class MySQLConnector(BaseConnector):
         return connection
 
     def get_peewee_database(self):
-        self.ensure_route_to_database()
-        host, port = self._host_port()
-        try:
-            self._database = MySQLDatabaseReconnect(
-                self._db, host=host, port=port, user=self._user, passwd=self._passwd
-            )
-        except None:
-            # TODO More descriptive here.
-            raise ConnectionError("Failed to connect to database.")
+        if self._database is None:
+            self.ensure_route_to_database()
+            host, port = self._host_port()
+            try:
+                self._database = MySQLDatabaseReconnect(
+                    self._db, host=host, port=port, user=self._user, passwd=self._passwd
+                )
+            except None:
+                # TODO More descriptive here.
+                raise ConnectionError("Failed to connect to database.")
         return self._database
 
     @property
@@ -573,9 +574,10 @@ class SqliteConnector(BaseConnector):
         return connection
 
     def get_peewee_database(self):
-        self._database = pw.SqliteDatabase(
-            self._db, uri=True if self._db.startswith("file:") else False
-        )
+        if self._database is None:
+            self._database = pw.SqliteDatabase(
+                self._db, uri=True if self._db.startswith("file:") else False
+            )
         return self._database
 
     def close(self):
@@ -754,7 +756,7 @@ def connect(reconnect=False):
             connectors, connectors_rw, context = rc_data
         elif _TEST_ENABLE:
             # Make an in-memory sqlite database
-            connectors = [SqliteConnector("file::memory:?cache=shared&mode=ro")]
+            connectors = [SqliteConnector("file::memory:?cache=shared", read_write=False)]
             connectors_rw = [SqliteConnector("file::memory:?cache=shared")]
             context = "_TEST_ENABLE"
         else:
