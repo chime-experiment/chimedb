@@ -578,7 +578,7 @@ class SqliteConnector(BaseConnector):
         return connection
 
     def get_peewee_database(self):
-        if self._database is None:
+        if self._database is None or not self._database.is_connection_usable():
             self._database = pw.SqliteDatabase(
                 self._db, uri=True if self._db.startswith("file:") else False
             )
