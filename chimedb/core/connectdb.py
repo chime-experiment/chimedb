@@ -449,7 +449,7 @@ class MySQLConnector(BaseConnector):
 
     def get_peewee_database(self):
         self.ensure_route_to_database()
-        if self._database is None:
+        if self._database is None or not self._database.is_connection_usable():
             host, port = self._host_port()
             try:
                 self._database = MySQLDatabaseReconnect(
