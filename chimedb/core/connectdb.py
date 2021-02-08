@@ -448,7 +448,10 @@ class MySQLConnector(BaseConnector):
         return connection
 
     def get_peewee_database(self):
+        # This will set self._database to None if a new tunnel is established
+        # (possibly because the old one died)
         self.ensure_route_to_database()
+
         if self._database is None or not self._database.is_connection_usable():
             host, port = self._host_port()
             try:
