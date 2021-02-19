@@ -6,7 +6,7 @@ import tempfile
 
 user = "Test"
 user_id = 0
-fail_user = "fail"
+fail_user = "Fail"
 password = "******"
 
 
@@ -14,25 +14,12 @@ password = "******"
 def db_conn():
     """Set up chimedb.core for testing with a local dummy DB."""
     (fd, rcfile) = tempfile.mkstemp(text=True)
-    with os.fdopen(fd, "a") as rc:
-        rc.write(
-            """\
-        chimedb:
-            db_type:         MySQL
-            db:              test
-            user_ro:         travis
-            passwd_ro:       ""
-            user_rw:         travis
-            passwd_rw:       ""
-            host:            127.0.0.1
-            port:            3306
-        """
-        )
+    os.close(fd)
 
     # Tell chimedb where the database connection config is
     assert os.path.isfile(rcfile), "Could not find {}.".format(rcfile)
-    os.environ["CHIMEDB_TEST_RC"] = rcfile
 
+    os.environ["CHIMEDB_TEST_SQLITE"] = rcfile
     # Make sure we don't write to the actual chime database
     os.environ["CHIMEDB_TEST_ENABLE"] = "Yes, please."
 
@@ -50,6 +37,12 @@ def db_conn():
     db.mediawiki.MediaWikiUser.get_or_create(
         user_id=1, user_name=fail_user, user_password=pwd
     )
+    db.close()
+
+    yield
+
+    # tear down
+    os.remove(rcfile)
 
 
 def test_user_authentication(db_conn):
