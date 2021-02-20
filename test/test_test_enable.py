@@ -1,5 +1,4 @@
 import os
-import sqlite3
 import tempfile
 import unittest
 import peewee as pw
