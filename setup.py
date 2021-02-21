@@ -10,7 +10,7 @@ setup(
     zip_safe=False,
     install_requires=[
         "mysqlclient",
-        "peewee >= 3.10",
+        "peewee >= 3.12",
         "sshtunnel",
         "ujson",
         "future",
