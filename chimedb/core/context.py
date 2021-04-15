@@ -36,9 +36,9 @@ def atomic(_func=None, **_kwargs):
 
     which ensures all database operations in func() occur in a transaction.
 
-    If func() raises an exception, any pending transaction will be rolled back.
-    Otherwise any pending transaction will be automatically committed when
-    func() exits.
+    If func() raises an exception, or calls sys.exit() with a non-zero return
+    code, any pending transaction will be rolled back.  Otherwise any pending
+    transaction will be automatically committed when func() exits.
 
     While within peewee's atomic() context, a transaction is always in progress.
     As a result, calling chimedb.core.close() from within func() is not allowed.
@@ -88,10 +88,22 @@ def atomic(_func=None, **_kwargs):
         def atomic_wrapper(*args, **kwargs):
             connect(read_write=read_write)
 
+            saved_exit = None
+
             _logger.debug("Entering atomic context")
-            with proxy.atomic():
-                ret = _func(*args, **kwargs)
+            with proxy.atomic() as transaction:
+                try:
+                    ret = _func(*args, **kwargs)
+                except SystemExit as e:
+                    if e.code:
+                        _logger.debug("Non-zero SystemExit.code: rolling back")
+                        transaction.rollback()
+                    saved_exit = e
             _logger.debug("Exited atomic context")
+
+            if saved_exit:
+                _logger.debug("Raising delayed SystemExit")
+                raise saved_exit
             return ret
 
         if _command:
