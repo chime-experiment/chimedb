@@ -120,35 +120,6 @@ and connected to.  This in-memory database will exist until close() is
 called (or the program exits).
 """
 
-# === Start Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# Explicity avoid importing int: sshtunnel requires port numbers
-# be native int objects.
-from future.builtins import (
-    ascii,
-    bytes,
-    chr,
-    dict,
-    filter,
-    hex,
-    input,
-    map,
-    next,
-    oct,
-    open,
-    pow,
-    range,
-    round,
-    str,
-    super,
-    zip,
-)  # noqa  pylint: disable=W0401, W0614
-from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
-from future.utils import raise_from
-
-# === End Python 2/3 compatibility
-
 import os
 import logging
 import mysql.connector
@@ -775,16 +746,12 @@ def connect(reconnect=False):
         else:
             try:
                 from chimedb.config import connectors, connectors_rw
-            except ImportError:
-                raise_from(
-                    NoRouteToDatabase(
-                        """
-Unable to find connection configuration for the database!
-Either provide a chimedb RC file in one of the default
-locations or install `chimedb.config`."""
-                    ),
-                    None,
-                )
+            except ImportError as e:
+                raise NoRouteToDatabase(
+                    "Unable to find connection configuration for the database!"
+                    "Either provide a chimedb RC file in one of the default"
+                    "locations or install `chimedb.config`."
+                ) from e
             else:
                 context = "chimedb.config"
 
