@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        "mysqlclient",
+        "mysql-connector-python",
         "peewee >= 3.12",
         "sshtunnel",
         "ujson",

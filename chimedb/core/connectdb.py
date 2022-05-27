@@ -151,8 +151,10 @@ from future.utils import raise_from
 
 import os
 import logging
-import MySQLdb
+import mysql.connector
 import peewee as pw
+from playhouse.mysql_ext import MySQLConnectorDatabase
+
 import socket
 import sqlite3
 import yaml
@@ -171,10 +173,12 @@ _logger = logging.getLogger("chimedb")
 # Thread-local connectors: the MySQLdb module prohibits
 # multiple threads from using the same database connection
 # so we store the current connection in thread-local storage
+# NOTE: we have switched to the pure python mysql.connector package, but I've left this
+# in place for now for safety
 _threadlocal = threading.local()
 
 # This cannot be "localhost" because that is used as a special
-# value by MySQLdb to indicate that it should connect to a local
+# value by MySQL to indicate that it should connect to a local
 # socket
 _LOCALHOST = "127.0.0.1"
 
@@ -262,7 +266,7 @@ class RetryOperationalError(object):
         return cursor
 
 
-class MySQLDatabaseReconnect(RetryOperationalError, pw.MySQLDatabase):
+class MySQLDatabaseReconnect(RetryOperationalError, MySQLConnectorDatabase):
     """A MySQL database class which will automatically retry connections."""
 
     pass
@@ -431,7 +435,7 @@ class MySQLConnector(BaseConnector):
         self.ensure_route_to_database()
         host, port = self._host_port()
         try:
-            connection = MySQLdb.connect(
+            connection = mysql.connector.connect(
                 db=self._db,
                 host=host,
                 port=port,
@@ -439,7 +443,7 @@ class MySQLConnector(BaseConnector):
                 passwd=self._passwd,
                 connect_timeout=1,
             )
-        except MySQLdb.OperationalError as e:
+        except mysql.connector.errors.OperationalError as e:
             if self._tunnel is not None and self._tunnel.is_active:
                 self._tunnel.stop()
             raise ConnectionError(
@@ -629,7 +633,7 @@ def connected_mysql(db):
     try:
         db.ping()
         return True
-    except MySQLdb.InterfaceError:
+    except mysql.connector.errors.InterfaceError:
         return False
 
 
