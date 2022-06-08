@@ -11,7 +11,7 @@ setup(
     install_requires=[
         "mysql-connector-python",
         "peewee >= 3.12",
-        "sshtunnel",
+        "sshtunnel >= 0.4.0",
         "ujson",
         "future",
         "PyYAML",

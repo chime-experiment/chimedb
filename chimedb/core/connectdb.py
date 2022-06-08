@@ -413,13 +413,15 @@ class MySQLConnector(BaseConnector):
                 user=self._user,
                 passwd=self._passwd,
                 connect_timeout=1,
+                get_warnings=True,
+                use_pure=True,
             )
         except mysql.connector.errors.OperationalError as e:
             if self._tunnel is not None and self._tunnel.is_active:
-                self._tunnel.stop()
+                self._tunnel.stop(force=True)
             raise ConnectionError(
                 "Operational Error while connecting to database: {0}".format(e)
-            )
+            ) from e
         return connection
 
     def get_peewee_database(self):
@@ -431,7 +433,12 @@ class MySQLConnector(BaseConnector):
             host, port = self._host_port()
             try:
                 self._database = MySQLDatabaseReconnect(
-                    self._db, host=host, port=port, user=self._user, passwd=self._passwd
+                    self._db,
+                    host=host,
+                    port=port,
+                    user=self._user,
+                    passwd=self._passwd,
+                    use_pure=True,
                 )
             except None:
                 # TODO More descriptive here.
@@ -481,16 +488,10 @@ class MySQLConnector(BaseConnector):
                 local_bind_address=(_LOCALHOST,),
                 ssh_username=self._tunnel_user,
                 ssh_pkey=self._tunnel_identity,
-                threaded=False,  # Need to stop MySQL/sshtunnel hanging
             )
         except ValueError:
             msg = "No authentication option for %s" % self._tunnel_host
             raise NoRouteToDatabase(msg)
-
-        # Set the threads to be daemon threads so that Python doesn't
-        # hang waiting for them when it tries to exit
-        self._tunnel.daemon_transport = True
-        self._tunnel.daemon_forward_servers = True
 
         # Try to start and handle any exceptions
         try:
@@ -514,12 +515,12 @@ class MySQLConnector(BaseConnector):
     def close(self):
         """Close an open connection."""
         if self._database is not None and not self._database.is_closed():
-            _logger.debug("Closing databse.")
+            _logger.debug("Closing database.")
             self._database.close()
             self._database = None
         if self._tunnel is not None and self._tunnel.is_active:
             _logger.debug("Stopping tunnel.")
-            self._tunnel.stop()
+            self._tunnel.stop(force=True)
             self._tunnel = None
 
 
@@ -565,7 +566,7 @@ class SqliteConnector(BaseConnector):
     def close(self):
         """Close an open connection."""
         if self._database is not None:
-            _logger.debug("Closing databse.")
+            _logger.debug("Closing database.")
             self._database.close()
             self._database = None
 
@@ -617,8 +618,13 @@ def close_mysql(db):
 def _initialize_connections(connectors_to_try, context, rw=False):
     for connector in connectors_to_try:
         try:
-            connector.get_connection()
-        except (NoRouteToDatabase, ConnectionError) as err:
+            c = connector.get_connection()
+            c.close()
+        except (
+            NoRouteToDatabase,
+            ConnectionError,
+            mysql.connector.errors.Error,
+        ) as err:
             _logger.debug(
                 "Unable to connect to {0} defined by {1}: {2}".format(
                     connector.description, context, err
