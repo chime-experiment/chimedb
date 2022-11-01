@@ -2,6 +2,8 @@
 Base classes for the CHIME ORM.
 """
 
+import time
+
 import peewee as pw
 import ujson
 from .exceptions import ConnectionError
@@ -261,7 +263,7 @@ class name_table(base_model):
 # ====================================
 
 
-def connect_database(read_write=False, reconnect=False):
+def connect_database(read_write=False, reconnect=False, ntries=1):
     """Initialize the connection to the CHIME database.
 
     If a basic connection to the database has already been established
@@ -296,7 +298,23 @@ def connect_database(read_write=False, reconnect=False):
 
     from . import connectdb
 
-    connectdb.connect(reconnect)
+    # Try multiple time to connect
+    for i in range(ntries):
+        try:
+            connectdb.connect(reconnect)
+            break
+        except ConnectionError as e:
+            if i == ntries - 1:
+                raise ConnectionError(
+                    f"Failed to connect to chimedb after {ntries} attempts."
+                ) from e
+
+            wait = max(60, 5 * 2**i)
+            logger.info(
+                f"Failed to connect attempt {i+1} of {ntries}. "
+                f"Trying again in {wait} seconds."
+            )
+            time.sleep(wait)
 
     # Don't attempt to connect if the DB connection doesn't exist (due
     # to MPI reasons).
