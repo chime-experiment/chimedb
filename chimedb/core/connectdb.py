@@ -484,6 +484,7 @@ class MySQLConnector(BaseConnector):
         try:
             self._tunnel = sshtunnel.SSHTunnelForwarder(
                 self._tunnel_host,
+                ssh_config_file=None,
                 remote_bind_address=(self._host, self._port),
                 local_bind_address=(_LOCALHOST,),
                 ssh_username=self._tunnel_user,
