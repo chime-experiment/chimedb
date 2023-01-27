@@ -89,13 +89,16 @@ class EnumField(pw.Field):
         else:
             return [self.maxlen]
 
-    def coerce(self, val):
-        # Coerce the db/python value to the correct output. Also perform
-        # validation for non native ENUMs.
-        if self.native or val in self.enum_list:
-            return str(val or "")
+    def db_value(self, val):
+        """Verify supplied value before handing off to DB."""
+
+        # If we're using a native Enum field, just let the DBMS decide what to do
+        # Otherwise, allow values in the enum_list and the null value (which may
+        # be rejected by the database, but that's not our problem.)
+        if self.native or val in self.enum_list or val is None:
+            return val
         else:
-            raise TypeError("Value %s not in ENUM(%s)" % str(self.value))
+            raise ValueError(f'invalid value "{val}" for EnumField')
 
 
 class JSONDictField(pw.TextField):
