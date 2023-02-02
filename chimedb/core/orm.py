@@ -400,7 +400,6 @@ def create_tables(packages=None, ignore=list(), check=False):
     # Construct the list of tables
     def find_tables(model, tables, ignore):
         for cls in model.__subclasses__():
-
             if cls.__name__ in ignore:
                 continue
             tables.append(cls)

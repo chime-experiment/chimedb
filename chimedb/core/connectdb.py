@@ -561,7 +561,8 @@ class SqliteConnector(BaseConnector):
     def get_connection(self):
         try:
             connection = sqlite3.connect(
-                self._db, uri=True if self._db.startswith("file:") else False
+                self._db,
+                uri=True if self._db.startswith("file:") else False,
             )
         except sqlite3.OperationalError:
             raise ConnectionError(
@@ -572,7 +573,8 @@ class SqliteConnector(BaseConnector):
     def get_peewee_database(self):
         if self._database is None or not self._database.is_connection_usable():
             self._database = pw.SqliteDatabase(
-                self._db, uri=True if self._db.startswith("file:") else False
+                self._db,
+                uri=True if self._db.startswith("file:") else False,
             )
         return self._database
 
