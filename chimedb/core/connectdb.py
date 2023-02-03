@@ -223,17 +223,29 @@ class RetryOperationalError(object):
     Source: https://github.com/coleifer/peewee/issues/1472
     """
 
-    def execute_sql(self, sql, params=None, commit=True):
+    def execute_sql(self, sql, params=None, commit=pw.SENTINEL):
+        """Extend default execute_sql to retry.
+
+        Retries once on pw.OperationalError, but only if not
+        in a transaction, and only if the database is set to
+        autoreconnect.
+        """
         try:
-            cursor = super(RetryOperationalError, self).execute_sql(sql, params, commit)
+            cursor = super().execute_sql(sql, params, commit)
         except pw.OperationalError:
+            # If we're in a transaction or the database isn't
+            # set to autoconnect, there's not much we can do,
+            # so just continue to crash
+            if not self.autoconnect or self.in_transaction():
+                raise
+
+            # Close the broken connector, if it's still open
             if not self.is_closed():
                 self.close()
-            with pw.__exception_wrapper__:
-                cursor = self.cursor()
-                cursor.execute(sql, params or ())
-                if commit and not self.in_transaction():
-                    self.commit()
+
+            # And then retry.  This will re-open the DB because
+            # we've just closed it and autoconnect is True.
+            cursor = super().execute_sql(sql, params, commit)
         return cursor
 
 
@@ -549,7 +561,8 @@ class SqliteConnector(BaseConnector):
     def get_connection(self):
         try:
             connection = sqlite3.connect(
-                self._db, uri=True if self._db.startswith("file:") else False
+                self._db,
+                uri=True if self._db.startswith("file:") else False,
             )
         except sqlite3.OperationalError:
             raise ConnectionError(
@@ -560,7 +573,8 @@ class SqliteConnector(BaseConnector):
     def get_peewee_database(self):
         if self._database is None or not self._database.is_connection_usable():
             self._database = pw.SqliteDatabase(
-                self._db, uri=True if self._db.startswith("file:") else False
+                self._db,
+                uri=True if self._db.startswith("file:") else False,
             )
         return self._database
 
