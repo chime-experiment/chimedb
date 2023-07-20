@@ -418,6 +418,9 @@ class MySQLConnector(BaseConnector):
         self.ensure_route_to_database()
         host, port = self._host_port()
         try:
+            # At log level DEBUG, mysql.connector leaks the DB password
+            logging.disable(logging.DEBUG)
+
             connection = mysql.connector.connect(
                 db=self._db,
                 host=host,
@@ -428,7 +431,13 @@ class MySQLConnector(BaseConnector):
                 get_warnings=True,
                 use_pure=True,
             )
+
+            # Reset logging
+            logging.disable(logging.NOTSET)
         except mysql.connector.errors.OperationalError as e:
+            # Reset logging
+            logging.disable(logging.NOTSET)
+
             if self._tunnel is not None and self._tunnel.is_active:
                 self._tunnel.stop(force=True)
             raise ConnectionError(
