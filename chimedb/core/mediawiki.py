@@ -32,7 +32,7 @@ class MediaWikiUser(base_model):
     """
 
     user_id = pw.IntegerField(primary_key=True)
-    user_name = pw.TextField()
+    user_name = pw.BlobField()
     user_password = pw.TextField()
 
     @classmethod
