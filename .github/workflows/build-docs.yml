@@ -1,0 +1,32 @@
+name: build-pdoc
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_docs:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+
+      - name: Install pip requirements
+        run: pip install pdoc
+
+      - uses: actions/checkout@v2
+      - name: Install chimedb
+        run: |
+          pip install .
+      - name: pdoc build
+        env:
+          # Treat warnings as errors
+          PYTHONWARNINGS: 'error::UserWarning'
+        run: |
+          pdoc --html chimedb
