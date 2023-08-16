@@ -81,10 +81,10 @@ Classes
     SqliteConnector
 
 
-Constants
-=========
+Attributes
+==========
 
-These constants tell the module how to connect to the CHIME database.
+These attributes tell the module how to connect to the CHIME database.
 
 :const:`ALL_RANKS`
     Whether to try to connect all ranks in an MPI job, or just rank=0.
@@ -179,6 +179,43 @@ def test_enable():
         _TEST_ENABLE = True
 
 
+# Log filtering of mysql.connector
+# ================================
+# mysql.connector outputs the MySQL password to the log at log-level DEBUG.
+# By default, we filter these messages out, but that can be disabled at runtime
+# by calling ``connectdb.secure_logging(False)``
+
+
+class PasswordFilter(logging.Filter):
+    def filter(self, record):
+        """Drops password messages from the log."""
+        return "password: %s" not in record.msg
+
+
+mclog = logging.getLogger("mysql.connector.connection")
+
+_password_filter = PasswordFilter()
+
+# By default, the mysql.connector is filtered
+mclog.addFilter(_password_filter)
+
+_mysql_connector_log_filtered = True  # True if the filter is installed
+
+
+def secure_logging(enable=True):
+    """Enable or disable the mysql.connector log filter."""
+    global _mysql_connector_log_filtered, _password_filter
+
+    if enable and not _mysql_connector_log_filtered:
+        # Start filtering
+        mclog.addFilter(_password_filter)
+        _mysql_connector_log_filtered = True
+    elif not enable and _mysql_connector_log_filtered:
+        # Stop filtering
+        mclog.removeFilter(_password_filter)
+        _mysql_connector_log_filtered = False
+
+
 def current_connector(read_write=False):
     """The current database connector for this thread, or None if no
     database connection has been made.
@@ -223,7 +260,7 @@ class RetryOperationalError(object):
     Source: https://github.com/coleifer/peewee/issues/1472
     """
 
-    def execute_sql(self, sql, params=None, commit=pw.SENTINEL):
+    def execute_sql(self, sql, params=None, commit=None):
         """Extend default execute_sql to retry.
 
         Retries once on pw.OperationalError, but only if not
@@ -418,9 +455,6 @@ class MySQLConnector(BaseConnector):
         self.ensure_route_to_database()
         host, port = self._host_port()
         try:
-            # At log level DEBUG, mysql.connector leaks the DB password
-            logging.disable(logging.DEBUG)
-
             connection = mysql.connector.connect(
                 db=self._db,
                 host=host,
@@ -431,13 +465,7 @@ class MySQLConnector(BaseConnector):
                 get_warnings=True,
                 use_pure=True,
             )
-
-            # Reset logging
-            logging.disable(logging.NOTSET)
         except mysql.connector.errors.OperationalError as e:
-            # Reset logging
-            logging.disable(logging.NOTSET)
-
             if self._tunnel is not None and self._tunnel.is_active:
                 self._tunnel.stop(force=True)
             raise ConnectionError(

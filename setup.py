@@ -10,8 +10,7 @@ setup(
     zip_safe=False,
     install_requires=[
         "mysql-connector-python >= 8.0, <= 8.0.29",
-        "peewee >= 3.12",
-        "pymysql",
+        "peewee >= 3.16.3",
         "sshtunnel >= 0.4.0",
         "ujson",
         "future",
