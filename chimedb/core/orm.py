@@ -136,6 +136,22 @@ class JSONDictField(pw.TextField):
         return pyval
 
 
+class TextBlobField(pw.BlobField):
+    """A textfield which is Unicode in Python and a BLOB in the db."""
+
+    # NOTE: db_value in the superclass already does the str -> bytes conversion
+
+    def python_value(self, value: bytes) -> str:
+        """Convert the returned bytes into a str."""
+
+        try:
+            return value.decode()
+        except UnicodeDecodeError as e:
+            raise RuntimeError(
+                f"Cannot convert database {value=} into a Unicode string"
+            ) from e
+
+
 class base_model(pw.Model):
     """Base class for all table models."""
 
