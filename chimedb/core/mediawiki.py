@@ -1,4 +1,4 @@
-from .orm import base_model
+from .orm import base_model, TextBlobField
 from .exceptions import ValidationError
 
 import hashlib
@@ -32,7 +32,7 @@ class MediaWikiUser(base_model):
     """
 
     user_id = pw.IntegerField(primary_key=True)
-    user_name = pw.BlobField()
+    user_name = TextBlobField()
     user_password = pw.TextField()
 
     @classmethod
