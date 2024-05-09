@@ -454,6 +454,20 @@ class MySQLConnector(BaseConnector):
     def get_connection(self):
         self.ensure_route_to_database()
         host, port = self._host_port()
+
+        # See if a chimedb timeout variable has been set correctly
+        timeout = 1
+
+        if _have_envvar("CHIMEDB_CONNECT_TIMEOUT"):
+            os_timeout = os.environ["CHIMEDB_CONNECT_TIMEOUT"]
+            # Ensure that this is an integer
+            if os_timeout.isdigit():
+                timeout = int(os_timeout)
+            else:
+                _logger.warning(
+                    f"CHIMEDB_CONNECT_TIMEOUT set to an invalid value: {os_timeout}"
+                )
+
         try:
             connection = mysql.connector.connect(
                 db=self._db,
@@ -461,7 +475,7 @@ class MySQLConnector(BaseConnector):
                 port=port,
                 user=self._user,
                 passwd=self._passwd,
-                connect_timeout=1,
+                connect_timeout=timeout,
                 get_warnings=True,
                 use_pure=True,
             )
