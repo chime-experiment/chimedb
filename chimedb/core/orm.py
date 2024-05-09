@@ -302,11 +302,13 @@ def connect_database(read_write=False, reconnect=False, ntries=1):
 
     Parameters
     ----------
-    `read_write` : bool
+    read_write : bool
         If True, use a read-write connection to the database, otherwise
         a read-only connection will be established.
-    `reconnect` : bool
+    reconnect : bool
         Force a reconnection.
+    ntries : int
+        Number of times to attempt to connect to the database
 
     Raises
     ------
