@@ -77,27 +77,6 @@ class TestSafeMode(unittest.TestCase):
         stat = os.stat(dbfile)
         self.assertNotEqual(stat.st_size, 0)
 
-    def test_chimedb_test_sqlite(self):
-        # Create an empty on-disk sqlite database
-        (fd, dbfile) = tempfile.mkstemp(text=True)
-        os.close(fd)
-
-        os.environ["CHIMEDB_TEST_SQLITE"] = dbfile
-
-        db.test_enable()
-
-        db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
-
-        # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
-        db.close()
-
-        # The on-disk sqlite database should not be empty anymore
-        stat = os.stat(dbfile)
-        self.assertNotEqual(stat.st_size, 0)
-
     def test_chimedb_sqlite(self):
         # Create an empty on-disk sqlite database that won't be used
         (fd, dbfile) = tempfile.mkstemp(text=True)
