@@ -7,7 +7,7 @@ from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
-class TestTable(base_model):
+class TableTest(base_model):
     datum = pw.IntegerField()
 
 
@@ -45,11 +45,11 @@ class TestSafeMode(unittest.TestCase):
         db.test_enable()
 
         db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
+        db.proxy.create_tables([TableTest])
+        TableTest.create(datum=datum_value)
 
         # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
         db.close()
 
         # The on-disk sqlite database should not be empty anymore
@@ -66,11 +66,11 @@ class TestSafeMode(unittest.TestCase):
         os.environ["CHIMEDB_TEST_ENABLE"] = "1"
 
         db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
+        db.proxy.create_tables([TableTest])
+        TableTest.create(datum=datum_value)
 
         # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
         db.close()
 
         # The on-disk sqlite database should not be empty anymore
@@ -88,11 +88,11 @@ class TestSafeMode(unittest.TestCase):
         db.test_enable()
 
         db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
+        db.proxy.create_tables([TableTest])
+        TableTest.create(datum=datum_value)
 
         # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
         db.close()
 
         # The on-disk sqlite database should still be empty
@@ -124,11 +124,11 @@ chimedb:
         db.test_enable()
 
         db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
+        db.proxy.create_tables([TableTest])
+        TableTest.create(datum=datum_value)
 
         # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
         db.close()
 
         # The on-disk sqlite database should still be empty
@@ -162,11 +162,11 @@ chimedb:
         db.test_enable()
 
         db.connect(read_write=True)
-        db.proxy.create_tables([TestTable])
-        TestTable.create(datum=datum_value)
+        db.proxy.create_tables([TableTest])
+        TableTest.create(datum=datum_value)
 
         # Did that work?
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
         db.close()
 
         # The on-disk sqlite database should not be empty
@@ -184,7 +184,3 @@ chimedb:
 
         with self.assertRaises(OSError):
             db.connect()
-
-
-if __name__ == "__main__":
-    unittest.main()

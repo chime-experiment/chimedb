@@ -8,7 +8,7 @@ from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
-class TestTable(base_model):
+class TableTest(base_model):
     datum = pw.IntegerField()
 
 
@@ -32,8 +32,8 @@ class TestDecorator(unittest.TestCase):
         conn = sqlite3.connect(self.dbfile)
         curs = conn.cursor()
 
-        curs.execute("CREATE TABLE testtable (datum INTEGER)")
-        curs.execute("INSERT INTO testtable VALUES (?)", (datum_value,))
+        curs.execute("CREATE TABLE tabletest (datum INTEGER)")
+        curs.execute("INSERT INTO tabletest VALUES (?)", (datum_value,))
 
         conn.commit()
         conn.close()
@@ -46,7 +46,7 @@ class TestDecorator(unittest.TestCase):
     def test_atomic_rollback(self):
         @db.atomic(read_write=True)
         def inside_atomic():
-            TestTable.update(datum=datum_value + 1).execute()
+            TableTest.update(datum=datum_value + 1).execute()
 
             db.proxy.rollback()
 
@@ -56,12 +56,12 @@ class TestDecorator(unittest.TestCase):
         # Check
         db.close()
         db.connect()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
 
     def test_atomic_commit(self):
         @db.atomic(read_write=True)
         def inside_atomic():
-            TestTable.update(datum=datum_value + 1).execute()
+            TableTest.update(datum=datum_value + 1).execute()
 
             db.proxy.commit()
 
@@ -71,12 +71,12 @@ class TestDecorator(unittest.TestCase):
         # Check
         db.close()
         db.connect()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value + 1)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value + 1)
 
     def test_atomic_raise(self):
         @db.atomic(read_write=True)
         def inside_atomic():
-            TestTable.update(datum=datum_value + 1).execute()
+            TableTest.update(datum=datum_value + 1).execute()
 
             raise RuntimeError
 
@@ -87,12 +87,12 @@ class TestDecorator(unittest.TestCase):
         # Check
         db.close()
         db.connect()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
 
     def test_atomic_autocommit(self):
         @db.atomic(read_write=True)
         def inside_atomic():
-            TestTable.update(datum=datum_value + 1).execute()
+            TableTest.update(datum=datum_value + 1).execute()
 
         # Execute
         inside_atomic()
@@ -100,8 +100,4 @@ class TestDecorator(unittest.TestCase):
         # Check
         db.close()
         db.connect()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value + 1)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value + 1)
