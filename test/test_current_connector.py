@@ -14,7 +14,3 @@ class TestCurrentConnector(unittest.TestCase):
 
     def test_uninitialised_rw(self):
         self.assertEqual(connectdb.current_connector(read_write=True), None)
-
-
-if __name__ == "__main__":
-    unittest.main()

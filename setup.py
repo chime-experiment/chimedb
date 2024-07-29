@@ -16,6 +16,7 @@ setup(
         "future",
         "PyYAML",
     ],
+    python_requires=">=3.9",
     author="The CHIME Collaboration",
     author_email="dvw@phas.ubc.ca",
     description="Low-level CHIME database access",

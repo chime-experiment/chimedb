@@ -2,7 +2,6 @@
 
 import logging
 import functools
-import peewee as pw
 from . import connect, proxy
 
 # Set module logger.

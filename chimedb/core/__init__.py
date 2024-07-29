@@ -122,3 +122,21 @@ from . import mediawiki
 from . import _version
 
 __version__ = _version.get_versions()["version"]
+del _version
+
+__all__ = [
+    "CHIMEdbError",
+    "NotFoundError",
+    "ValidationError",
+    "InconsistencyError",
+    "AlreadyExistsError",
+    "NoRouteToDatabase",
+    "ConnectionError",
+    "connect",
+    "proxy",
+    "close",
+    "test_enable",
+    "atomic",
+    "mediawiki",
+    "__version__",
+]

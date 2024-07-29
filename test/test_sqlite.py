@@ -8,7 +8,7 @@ from unittest.mock import patch
 from chimedb.core.orm import base_model
 
 
-class TestTable(base_model):
+class TableTest(base_model):
     datum = pw.IntegerField()
 
 
@@ -31,8 +31,8 @@ class TestSqlite(unittest.TestCase):
         conn = sqlite3.connect(self.dbfile)
         curs = conn.cursor()
 
-        curs.execute("CREATE TABLE testtable (datum INTEGER)")
-        curs.execute("INSERT INTO testtable VALUES (?)", (datum_value,))
+        curs.execute("CREATE TABLE tabletest (datum INTEGER)")
+        curs.execute("INSERT INTO tabletest VALUES (?)", (datum_value,))
 
         conn.commit()
         conn.close()
@@ -47,7 +47,7 @@ class TestSqlite(unittest.TestCase):
 
     def test_connect(self):
         db.connect()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
 
     def test_connect_uri(self):
         os.environ["CHIMEDB_TEST_SQLITE"] = "file:" + self.dbfile
@@ -56,18 +56,18 @@ class TestSqlite(unittest.TestCase):
     def test_connect_ro(self):
         db.connect()
         with self.assertRaises(pw.OperationalError):
-            TestTable.update(datum=datum_value * 2).execute()
+            TableTest.update(datum=datum_value * 2).execute()
 
     def test_connect_rw(self):
         db.connect(read_write=True)
-        TestTable.update(datum=datum_value * 2).execute()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value * 2)
+        TableTest.update(datum=datum_value * 2).execute()
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value * 2)
 
     def test_switch_connection(self):
         self.test_connect_ro()
         self.test_connect_rw()
         self.test_connect_ro()
-        self.assertEqual(TestTable.select(TestTable.datum).scalar(), datum_value * 2)
+        self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value * 2)
 
     def test_rcfile(self):
         # Create a temporary file
@@ -90,7 +90,3 @@ chimedb:
         # connectors correctly.
         self.test_switch_connection()
         os.unlink(rcfile)
-
-
-if __name__ == "__main__":
-    unittest.main()
