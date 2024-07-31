@@ -119,11 +119,6 @@ from .connectdb import close, test_enable
 from .context import atomic
 from . import mediawiki
 
-from . import _version
-
-__version__ = _version.get_versions()["version"]
-del _version
-
 __all__ = [
     "CHIMEdbError",
     "NotFoundError",
@@ -140,3 +135,12 @@ __all__ = [
     "mediawiki",
     "__version__",
 ]
+
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("chimedb.core")
+except PackageNotFoundError:
+    # package is not installed
+    pass
+del version, PackageNotFoundError
