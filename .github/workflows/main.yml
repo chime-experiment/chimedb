@@ -60,7 +60,7 @@ jobs:
 
     - name: Install chimedb
       run: |
-        pip install .[tests]
+        pip install .[test]
 
     - name: Run tests
       run: pytest .
