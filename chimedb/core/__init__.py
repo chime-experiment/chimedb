@@ -139,7 +139,7 @@ __all__ = [
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("chimedb.core")
+    __version__ = version("chimedb")
 except PackageNotFoundError:
     # package is not installed
     pass
