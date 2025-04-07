@@ -11,6 +11,7 @@ on what an alpenhorn database extension is.
 import peewee as pw
 
 from . import connectdb
+from .orm import connect_database
 from .exceptions import ConnectionError, NoRouteToDatabase
 
 
@@ -36,9 +37,9 @@ def connect(config):
         On database connection failure
     """
     try:
-        connectdb.connect()
+        connect_database()
     except (NoRouteToDatabase, ConnectionError) as e:
-        raise pw.OperationalError("chimedb connection failed") from e
+        raise pw.OperationalError(f"chimedb connection failed: {e}") from e
 
     # Retrieve the database connection
     connector = connectdb.current_connector(read_write=True)
