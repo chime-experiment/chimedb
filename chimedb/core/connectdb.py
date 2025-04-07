@@ -483,7 +483,7 @@ class MySQLConnector(BaseConnector):
             if self._tunnel is not None and self._tunnel.is_active:
                 self._tunnel.stop(force=True)
             raise ConnectionError(
-                "Operational Error while connecting to database: {0}".format(e)
+                f"Operational Error while connecting to database: {e}"
             ) from e
         return connection
 
@@ -505,7 +505,7 @@ class MySQLConnector(BaseConnector):
                 )
             except None:
                 # TODO More descriptive here.
-                raise ConnectionError("Failed to connect to database.")
+                raise ConnectionError("Failed to connect to database")
         return self._database
 
     @property
@@ -574,7 +574,7 @@ class MySQLConnector(BaseConnector):
         self._tunnel.skip_tunnel_checkup = False
         self._tunnel.check_tunnels()  # This waits for the tunnel to come up
         if not self._tunnel.tunnel_is_up[(_LOCALHOST, self._tunnel_port)]:
-            raise ConnectionError("An error occurred while setting up the tunnel.")
+            raise ConnectionError("An error occurred while setting up the tunnel")
 
     def close(self):
         """Close an open connection."""
@@ -616,9 +616,7 @@ class SqliteConnector(BaseConnector):
                 uri=True if self._db.startswith("file:") else False,
             )
         except sqlite3.OperationalError:
-            raise ConnectionError(
-                "Failed to connect to Sqlite database {0}.".format(self._db)
-            )
+            raise ConnectionError(f"Failed to connect to Sqlite database {self._db}")
         return connection
 
     def get_peewee_database(self):
@@ -822,7 +820,7 @@ def connect(reconnect=False):
                 raise NoRouteToDatabase(
                     "Unable to find connection configuration for the database!"
                     "Either provide a chimedb RC file in one of the default"
-                    "locations or install `chimedb.config`."
+                    "locations or install `chimedb.config`"
                 ) from e
             else:
                 context = "chimedb.config"
@@ -837,7 +835,7 @@ def connect(reconnect=False):
 
     if current_connector is None or current_connector_RW is None:
         raise ConnectionError(
-            "Connection data found, but no connection could be established."
+            "Connection data found, but no connection could be established"
         )
 
 

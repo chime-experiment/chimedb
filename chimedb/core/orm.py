@@ -116,7 +116,7 @@ class JSONDictField(pw.TextField):
             return None
 
         if not isinstance(value, dict):
-            raise ValueError("Python value must be a dict. Received %s" % type(value))
+            raise ValueError(f"Python value must be a dict. Received {type(value)}")
 
         return ujson.dumps(value)
 
@@ -129,9 +129,7 @@ class JSONDictField(pw.TextField):
         pyval = ujson.loads(value)
 
         if not isinstance(pyval, dict):
-            raise ValueError(
-                "Database value must convert to dict. Got %s" % type(pyval)
-            )
+            raise ValueError(f"Database value must convert to dict. Got {type(pyval)}")
 
         return pyval
 
@@ -327,7 +325,7 @@ def connect_database(read_write=False, reconnect=False, ntries=1):
         except ConnectionError as e:
             if i == ntries - 1:
                 raise ConnectionError(
-                    f"Failed to connect to chimedb after {ntries} attempts."
+                    f"Failed to connect to chimedb after {ntries} attempt{'s' if ntries == 1 else ''}: {e}"
                 ) from e
 
             wait = max(60, 5 * 2**i)
@@ -346,7 +344,7 @@ def connect_database(read_write=False, reconnect=False, ntries=1):
     connector = connectdb.current_connector(read_write)
 
     if not connector:
-        raise ConnectionError("No database connection could be established.")
+        raise ConnectionError("No database connection could be established")
 
     pw_database = connector.get_peewee_database()
 
