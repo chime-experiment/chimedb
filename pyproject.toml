@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dynamic = ["readme", "version"]
 license = {file = "LICENSE"}
 dependencies = [
-    "mysql-connector-python >= 9.1.0",
+    "mysql-connector-python >= 9.1.0,<9.3",
     "peewee >= 3.16.3",
     "sshtunnel >= 0.4.0",
     "ujson",
