@@ -122,10 +122,8 @@ called (or the program exits).
 
 import os
 import logging
-import mysql.connector
 import peewee as pw
-from playhouse.mysql_ext import MySQLConnectorDatabase
-
+import pymysql
 import socket
 import sqlite3
 import yaml
@@ -144,8 +142,8 @@ _logger = logging.getLogger("chimedb")
 # Thread-local connectors: the MySQLdb module prohibits
 # multiple threads from using the same database connection
 # so we store the current connection in thread-local storage
-# NOTE: we have switched to the pure python mysql.connector package, but I've left this
-# in place for now for safety
+#
+# TODO: Is this still necessary?
 _threadlocal = threading.local()
 
 # This cannot be "localhost" because that is used as a special
@@ -179,41 +177,12 @@ def test_enable():
         _TEST_ENABLE = True
 
 
-# Log filtering of mysql.connector
-# ================================
-# mysql.connector outputs the MySQL password to the log at log-level DEBUG.
-# By default, we filter these messages out, but that can be disabled at runtime
-# by calling ``connectdb.secure_logging(False)``
-
-
-class PasswordFilter(logging.Filter):
-    def filter(self, record):
-        """Drops password messages from the log."""
-        return "password: %s" not in record.msg
-
-
-mclog = logging.getLogger("mysql.connector.connection")
-
-_password_filter = PasswordFilter()
-
-# By default, the mysql.connector is filtered
-mclog.addFilter(_password_filter)
-
-_mysql_connector_log_filtered = True  # True if the filter is installed
-
-
 def secure_logging(enable=True):
-    """Enable or disable the mysql.connector log filter."""
-    global _mysql_connector_log_filtered, _password_filter
+    """Enable or disable secure logging.
 
-    if enable and not _mysql_connector_log_filtered:
-        # Start filtering
-        mclog.addFilter(_password_filter)
-        _mysql_connector_log_filtered = True
-    elif not enable and _mysql_connector_log_filtered:
-        # Stop filtering
-        mclog.removeFilter(_password_filter)
-        _mysql_connector_log_filtered = False
+    This is a no-op: these days, chimedb logging is always
+    secure."""
+    pass
 
 
 def current_connector(read_write=False):
@@ -254,7 +223,7 @@ def connect_this_rank():
 # ==============
 
 
-class RetryOperationalError(object):
+class RetryOperationalError:
     """Rewrite of the former `peewee.shortcuts.RetryOperationalError` mixin.
 
     Source: https://github.com/coleifer/peewee/issues/1472
@@ -286,7 +255,7 @@ class RetryOperationalError(object):
         return cursor
 
 
-class MySQLDatabaseReconnect(RetryOperationalError, MySQLConnectorDatabase):
+class MySQLDatabaseReconnect(RetryOperationalError, pw.MySQLDatabase):
     """A MySQL database class which will automatically retry connections."""
 
     pass
@@ -469,17 +438,15 @@ class MySQLConnector(BaseConnector):
                 )
 
         try:
-            connection = mysql.connector.connect(
+            connection = pymysql.connect(
                 db=self._db,
                 host=host,
                 port=port,
                 user=self._user,
                 passwd=self._passwd,
                 connect_timeout=timeout,
-                get_warnings=True,
-                use_pure=True,
             )
-        except mysql.connector.errors.OperationalError as e:
+        except pymysql.err.OperationalError as e:
             if self._tunnel is not None and self._tunnel.is_active:
                 self._tunnel.stop(force=True)
             raise ConnectionError(
@@ -501,7 +468,6 @@ class MySQLConnector(BaseConnector):
                     port=port,
                     user=self._user,
                     passwd=self._passwd,
-                    use_pure=True,
                 )
             except None:
                 # TODO More descriptive here.
@@ -669,7 +635,7 @@ def connected_mysql(db):
     try:
         db.ping()
         return True
-    except mysql.connector.errors.InterfaceError:
+    except pymysql.err.InterfaceError:
         return False
 
 
@@ -687,7 +653,7 @@ def _initialize_connections(connectors_to_try, context, rw=False):
         except (
             NoRouteToDatabase,
             ConnectionError,
-            mysql.connector.errors.Error,
+            pymysql.err.Error,
         ) as err:
             _logger.debug(
                 "Unable to connect to {0} defined by {1}: {2}".format(
