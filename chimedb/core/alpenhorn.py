@@ -50,12 +50,20 @@ def connect(config):
     return connector.get_peewee_database()
 
 
-def register_extension():
+def register_extensions():
     """Register an alpenhorn database extension.
 
-    Returns a "capability dict" providing the database capabilities of this
-    database module to alpenhorn.
+    Returns a one-element list containing the alpenhorn DatabaseExtension.
     """
-    return {
-        "database": {"connect": connect, "close": connectdb.close, "reentrant": True}
-    }
+    from alpenhorn.extensions import DatabaseExtension
+    from . import __version__
+
+    return [
+        DatabaseExtension(
+            "CHIMEdb",
+            __version__,
+            connect=connect,
+            close=connectdb.close,
+            reentrant=True,
+        )
+    ]
