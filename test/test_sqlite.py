@@ -25,7 +25,7 @@ class TestSqlite(unittest.TestCase):
 
     def setUp(self):
         # Create a temporary file
-        (fd, self.dbfile) = tempfile.mkstemp()
+        fd, self.dbfile = tempfile.mkstemp()
         os.close(fd)
 
         conn = sqlite3.connect(self.dbfile)
@@ -71,17 +71,13 @@ class TestSqlite(unittest.TestCase):
 
     def test_rcfile(self):
         # Create a temporary file
-        (fd, rcfile) = tempfile.mkstemp(text=True)
+        fd, rcfile = tempfile.mkstemp(text=True)
         with os.fdopen(fd, "a") as rc:
-            rc.write(
-                """\
+            rc.write("""\
 chimedb:
     db_type: sqlite
     db: {0}
-""".format(
-                    self.dbfile
-                )
-            )
+""".format(self.dbfile))
 
         del os.environ["CHIMEDB_TEST_SQLITE"]
         os.environ["CHIMEDB_TEST_RC"] = rcfile

@@ -37,7 +37,7 @@ class TestSafeMode(unittest.TestCase):
 
     def test_chimedb_test_sqlite(self):
         # Create an empty on-disk sqlite database
-        (fd, dbfile) = tempfile.mkstemp(text=True)
+        fd, dbfile = tempfile.mkstemp(text=True)
         os.close(fd)
 
         os.environ["CHIMEDB_TEST_SQLITE"] = dbfile
@@ -59,7 +59,7 @@ class TestSafeMode(unittest.TestCase):
     def test_chimedb_test_enable_envvar(self):
         # Like test_chimedb_test_sqlite, but using the envvar to turn on
         # test mode.
-        (fd, dbfile) = tempfile.mkstemp(text=True)
+        fd, dbfile = tempfile.mkstemp(text=True)
         os.close(fd)
 
         os.environ["CHIMEDB_TEST_SQLITE"] = dbfile
@@ -79,7 +79,7 @@ class TestSafeMode(unittest.TestCase):
 
     def test_chimedb_sqlite(self):
         # Create an empty on-disk sqlite database that won't be used
-        (fd, dbfile) = tempfile.mkstemp(text=True)
+        fd, dbfile = tempfile.mkstemp(text=True)
         os.close(fd)
 
         # This should be ignored
@@ -102,21 +102,17 @@ class TestSafeMode(unittest.TestCase):
 
     def test_chimedbrc(self):
         # Create an empty on-disk sqlite database that won't be used
-        (fd, dbfile) = tempfile.mkstemp(text=True)
+        fd, dbfile = tempfile.mkstemp(text=True)
         os.close(fd)
 
         # Create a rcfile
-        (fd, rcfile) = tempfile.mkstemp(text=True)
+        fd, rcfile = tempfile.mkstemp(text=True)
         with os.fdopen(fd, "a") as rc:
-            rc.write(
-                """\
+            rc.write("""\
 chimedb:
     db_type: sqlite
     db: {0}
-""".format(
-                    dbfile
-                )
-            )
+""".format(dbfile))
 
         # This should be ignored
         os.environ["CHIMEDBRC"] = rcfile
@@ -140,21 +136,17 @@ chimedb:
 
     def test_chimedb_test_rc(self):
         # Create an empty on-disk sqlite database
-        (fd, dbfile) = tempfile.mkstemp(text=True)
+        fd, dbfile = tempfile.mkstemp(text=True)
         os.close(fd)
 
         # Create a rcfile
-        (fd, rcfile) = tempfile.mkstemp(text=True)
+        fd, rcfile = tempfile.mkstemp(text=True)
         with os.fdopen(fd, "a") as rc:
-            rc.write(
-                """\
+            rc.write("""\
 chimedb:
     db_type: sqlite
     db: {0}
-""".format(
-                    dbfile
-                )
-            )
+""".format(dbfile))
 
         # This should be ignored
         os.environ["CHIMEDB_TEST_RC"] = rcfile

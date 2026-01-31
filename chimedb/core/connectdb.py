@@ -132,7 +132,6 @@ import threading
 
 from .exceptions import NoRouteToDatabase, ConnectionError
 
-
 # Globals
 # =======
 

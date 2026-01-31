@@ -13,7 +13,7 @@ password = "******"
 @pytest.fixture
 def db_conn():
     """Set up chimedb.core for testing with a local dummy DB."""
-    (fd, rcfile) = tempfile.mkstemp(text=True)
+    fd, rcfile = tempfile.mkstemp(text=True)
     os.close(fd)
 
     # Tell chimedb where the database connection config is
