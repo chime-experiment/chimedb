@@ -26,7 +26,7 @@ class TestDecorator(unittest.TestCase):
 
     def setUp(self):
         # Create a temporary file
-        (fd, self.dbfile) = tempfile.mkstemp()
+        fd, self.dbfile = tempfile.mkstemp()
         os.close(fd)
 
         conn = sqlite3.connect(self.dbfile)
