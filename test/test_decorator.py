@@ -44,11 +44,11 @@ class TestDecorator(unittest.TestCase):
         self.patched_env.start()
 
     def test_atomic_rollback(self):
-        @db.atomic(read_write=True)
-        def inside_atomic():
+        @db.atomic(read_write=True, pass_transaction=True)
+        def inside_atomic(transaction):
             TableTest.update(datum=datum_value + 1).execute()
 
-            db.proxy.rollback()
+            transaction.rollback()
 
         # Execute
         inside_atomic()
@@ -59,11 +59,11 @@ class TestDecorator(unittest.TestCase):
         self.assertEqual(TableTest.select(TableTest.datum).scalar(), datum_value)
 
     def test_atomic_commit(self):
-        @db.atomic(read_write=True)
-        def inside_atomic():
+        @db.atomic(read_write=True, pass_transaction=True)
+        def inside_atomic(transaction):
             TableTest.update(datum=datum_value + 1).execute()
 
-            db.proxy.commit()
+            transaction.commit()
 
         # Execute
         inside_atomic()
