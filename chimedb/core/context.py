@@ -8,7 +8,7 @@ from . import connect, proxy
 _logger = logging.getLogger("chimedb")
 
 
-def atomic(_func=None, **_kwargs):
+def atomic(_func=None, *, read_write=False, pass_transaction=False):
     """peewee atomic function decorator
 
     Use this to decorate a function:
@@ -48,16 +48,13 @@ def atomic(_func=None, **_kwargs):
 
     Parameters
     ----------
-    `read_write` : bool
+    read_write : bool
         If True, use a read-write connection to the database, otherwise
         a read-only connection will be established.
+    pass_transaction : bool
+        If True, the peewee transaction will be passed to the wrapped function
+        as a keyword argument called "transaction".
     """
-
-    # Work-around for "def atomic(_func=None, *, read_write=False):" not working in Py2
-    if "read_write" in _kwargs:
-        read_write = _kwargs["read_write"]
-    else:
-        read_write = False
 
     def atomic_decorator(_func):
         # If this is a click group or command, shoe-horn ourselves into it by
@@ -85,6 +82,10 @@ def atomic(_func=None, **_kwargs):
 
             _logger.debug("Entering atomic context")
             with proxy.atomic() as transaction:
+                # If we were asked to pass the transaction, add it to the keyword args
+                if pass_transaction:
+                    kwargs["transaction"] = transaction
+
                 try:
                     ret = _func(*args, **kwargs)
                 except SystemExit as e:
