@@ -57,10 +57,14 @@ Or for a sqlite database:
         db_type:         sqlite
         db:              <filename or URI>
 
-(Of course, you should put proper arguments in your file! No quotation marks
-should be used for strings.) If no tunnel is required, simply omit the
-``tunnel_`` entries.  The password entries can also be omitted if a password
-is not needed.
+The password entries should be omitted if a password is not needed for database
+authentication.
+
+When tunnelling the connection, if a SSH keyfile is given in ``tunnel_identity``,
+that will be used to authenticate with the tunnel host.  If the other tunnelling
+parameters are given without ``tunnel_identity``, chimedb will attempt to use
+your SSH agent or look for look for local key files.  If no tunnel is required,
+omit the ``tunnel_`` entries.
 
 If none of the YAML files are found, the last thing tried is to import a
 Python module called ``chimedb.config``.  This module, if present, should
@@ -124,12 +128,11 @@ import os
 import logging
 import peewee as pw
 import pymysql
-import socket
 import sqlite3
 import yaml
-import sshtunnel
 import threading
 
+from . import tunnel
 from .exceptions import NoRouteToDatabase, ConnectionError
 
 # Globals
@@ -394,8 +397,6 @@ class MySQLConnector(BaseConnector):
         Filename of ssh private key to use to log into tunnel server.
     """
 
-    _tunnel = None
-
     def __init__(
         self,
         db,
@@ -415,7 +416,6 @@ class MySQLConnector(BaseConnector):
         self._host = host
         self._port = port
         self._tunnel_host = tunnel_host
-        self._tunnel_port = None
         self._tunnel_user = tunnel_user
         self._tunnel_identity = tunnel_identity
 
@@ -446,8 +446,6 @@ class MySQLConnector(BaseConnector):
                 connect_timeout=timeout,
             )
         except pymysql.err.OperationalError as e:
-            if self._tunnel is not None and self._tunnel.is_active:
-                self._tunnel.stop(force=True)
             raise ConnectionError(
                 f"Operational Error while connecting to database: {e}"
             ) from e
@@ -477,68 +475,46 @@ class MySQLConnector(BaseConnector):
     def description(self):
         out = "MySQL database at %s port %d" % (self._host, self._port)
         if self._tunnel_host:
-            out += " tunnelled through {0} to localhost".format(self._tunnel_host)
-            if self._tunnel_port is not None:
-                out += " port {0}".format(self._tunnel_port)
+            tunnel_port = tunnel.port()
+            if tunnel_port is not None:
+                out += f" tunnelled through {self._tunnel_host} to localhost port {tunnel_port}"
         return out
 
     def _host_port(self):
         if self._tunnel_host:
             host = _LOCALHOST
-            port = self._tunnel_port
+            port = tunnel.port()
         else:
             host = self._host
             port = self._port
         return host, port
 
     def ensure_route_to_database(self):
-        # Check if we need a tunnel and create one if need be.
-        if not self._tunnel_host or tunnel_active(self._tunnel_port):
+        """Check if we need a tunnel and create one if need be."""
+
+        # If we're not tunnelling, there's nothing to do
+        if not self._tunnel_host or not self._tunnel_user:
             return
 
         if not connect_this_rank():
+            return
+
+        # Is there already a tunnel running?
+        if tunnel.active():
             return
 
         # Abandon an existing database connection: if the tunnel isn't
         # active, presumably the connection isn't working
         self._database = None
 
-        _logger.debug(
-            "Attempting SSH tunnel to {0}:{1} through {2}".format(
-                self._host, self._port, self._tunnel_host
-            )
-        )
-
-        try:
-            self._tunnel = sshtunnel.SSHTunnelForwarder(
-                self._tunnel_host,
-                ssh_config_file=None,
-                remote_bind_address=(self._host, self._port),
-                local_bind_address=(_LOCALHOST,),
-                ssh_username=self._tunnel_user,
-                ssh_pkey=self._tunnel_identity,
-            )
-        except ValueError:
-            msg = "No authentication option for %s" % self._tunnel_host
-            raise NoRouteToDatabase(msg)
-
-        # Try to start and handle any exceptions
-        try:
-            self._tunnel.start()
-        except (
-            sshtunnel.BaseSSHTunnelForwarderError,
-            sshtunnel.HandlerSSHTunnelForwarderError,
+        # Start the tunnel
+        if not tunnel.start(
+            tunnel_host=self._tunnel_host,
+            remote_host=self._host,
+            remote_port=self._port,
+            tunnel_user=self._tunnel_user,
+            tunnel_identity=self._tunnel_identity,
         ):
-            msg = "Could not tunnel through {0}.".format(self._tunnel_host)
-            raise NoRouteToDatabase(msg)
-
-        # Get the bound port number
-        self._tunnel_port = self._tunnel.local_bind_address[1]
-
-        # Wait for the tunnel to be established
-        self._tunnel.skip_tunnel_checkup = False
-        self._tunnel.check_tunnels()  # This waits for the tunnel to come up
-        if not self._tunnel.tunnel_is_up[(_LOCALHOST, self._tunnel_port)]:
             raise ConnectionError("An error occurred while setting up the tunnel")
 
     def close(self):
@@ -547,10 +523,6 @@ class MySQLConnector(BaseConnector):
             _logger.debug("Closing database.")
             self._database.close()
             self._database = None
-        if self._tunnel is not None and self._tunnel.is_active:
-            _logger.debug("Stopping tunnel.")
-            self._tunnel.stop(force=True)
-            self._tunnel = None
 
 
 class SqliteConnector(BaseConnector):
@@ -610,24 +582,19 @@ class SqliteConnector(BaseConnector):
 
 
 def tunnel_active(tunnel_port):
-    """Returns true if a connection to local port <tunnel_port> succeeds"""
-    if tunnel_port is None:
-        return False
+    """Returns True if the DB tunnel is running.
 
-    sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Just added this to speed things up.  I think this is enough time. -KM
-    sd.settimeout(0.5)
-    try:
-        # Connect to the given tunnel_port on localhost.
-        sd.connect((_LOCALHOST, tunnel_port))
-    except socket.error:
-        return False
-    sd.close()
-    return True
+    Parameters
+    ----------
+    tunnel_port : Any
+        Ignored.
 
-
-def create_tunnel(*args, **kwargs):
-    raise NotImplementedError("Try using sshtunnel instead.")
+    Returns
+    -------
+    bool
+        True if the database tunnel is running.  False otherwise.
+    """
+    return tunnel.active()
 
 
 def connected_mysql(db):
@@ -814,3 +781,6 @@ def close():
     if current_connector_RW:
         current_connector_RW.close()
         _threadlocal.current_connector_RW = None
+
+    # Also stop the tunnel, if it's running
+    tunnel.stop()
