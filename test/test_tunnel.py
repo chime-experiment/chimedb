@@ -114,11 +114,11 @@ def test_tunnel(fake_dbms, stop_tunnel):
         text=True,
     )
     if result.returncode or result.stdout != "This worked.\n":
-        pytest.skip("Can't SSH to localhost")
+        pytest.skip(f"Can't SSH to localhost: {result.stdout} / {result.stderr}")
 
     tunnel.start(
         tunnel_host="127.0.0.1",
-        tunnel_user=os.getlogin(),
+        tunnel_user=os.environ["USER"],
         tunnel_identity=None,
         remote_host="127.0.0.1",
         remote_port=fake_dbms,
